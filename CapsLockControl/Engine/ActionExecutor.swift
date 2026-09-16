@@ -109,11 +109,18 @@ final class ActionExecutor {
             report(.failed("\(name) 이(가) 실행 중이 아닙니다."))
             return
         }
-        if app.hide() {
-            report(.succeeded("\(name) 숨김"))
-        } else {
-            // 풀스크린 앱 등은 숨겨지지 않는다.
-            report(.failed("\(name) 을(를) 숨길 수 없습니다."))
+        // hide() 가 false 를 돌려주는데 실제로는 숨겨지는 앱이 있다(Tot 등).
+        // 반환값만 믿고 실패라고 알리면 사용자를 헷갈리게 한다. 잠깐 뒤 실제
+        // 상태를 보고 판단한다.
+        let reportedSuccess = app.hide()
+        Task { @MainActor [report] in
+            try? await Task.sleep(for: .milliseconds(120))
+            if reportedSuccess || app.isHidden || !app.isActive {
+                report(.succeeded("\(name) 숨김"))
+            } else {
+                // 풀스크린 앱 등은 정말로 숨겨지지 않는다.
+                report(.failed("\(name) 을(를) 숨길 수 없습니다."))
+            }
         }
     }
 

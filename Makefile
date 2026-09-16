@@ -2,7 +2,10 @@
 # 빌드 산출물은 프로젝트 안 build/ 로 모은다 (DerivedData 경로 추적이 귀찮아서).
 PROJ  := CapsLockControl.xcodeproj
 SCHEME:= CapsLockControl
-BUILD := $(CURDIR)/build
+# .noindex 로 끝나는 폴더는 Spotlight 가 색인하지 않는다.
+# 그냥 build/ 로 두면 make install 후 /Applications 사본과 빌드 사본이
+# 둘 다 Spotlight 에 떠서 어느 쪽이 실행될지 헷갈린다.
+BUILD := $(CURDIR)/build.noindex
 APP   := $(BUILD)/Build/Products/Debug/CapsLockControl.app
 
 .PHONY: build run test clean stop reset-hid install icon refresh-icon-cache
