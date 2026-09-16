@@ -43,7 +43,7 @@ struct MainWindowView: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("CapsLockControl").font(.title2).bold()
+                Text("CapsLock Control").font(.title2).bold()
                 Text(model.isEngineRunning
                      ? "동작 중 · 단축키 \(model.bindingCount)개"
                      : "정지됨")

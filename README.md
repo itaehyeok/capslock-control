@@ -50,30 +50,80 @@ Karabiner 클론도, Raycast 클론도 아니다. 외부 의존성 없이 Apple 
 
 ## 처음 쓰는 사람
 
+### 1. 받아서 설치
+
+**Xcode 26 이상이 필요하다.** Command Line Tools 만으로는 안 된다.
+
 ```bash
-git clone <이 저장소>
-cd CapsLockControl
-make install          # /Applications 로 설치하고 실행
+git clone https://github.com/itaehyeok/capslock-control.git
+cd capslock-control
+make install
 ```
 
-Apple 개발자 계정이 없어도 빌드된다(ad-hoc 서명). 계정이 있으면
-`Config/Signing.local.xcconfig.example` 를 `Signing.local.xcconfig` 로 복사해서
-팀 ID 를 넣으면 서명이 고정되어 **손쉬운 사용 권한을 다시 묻지 않는다.**
-ad-hoc 은 빌드할 때마다 서명이 달라져서 권한을 다시 물어볼 수 있다.
+`make install` 이 빌드해서 `/Applications` 에 넣고 실행까지 한다.
+Apple 개발자 계정이 없어도 된다(ad-hoc 서명).
 
-처음 실행하면:
+> 계정이 있으면 `Config/Signing.local.xcconfig.example` 를
+> `Signing.local.xcconfig` 로 복사해 팀 ID 를 넣자. 서명이 고정되어
+> **손쉬운 사용 권한을 다시 묻지 않는다.** ad-hoc 은 빌드할 때마다 서명이 달라져서
+> 권한을 다시 물어볼 수 있다.
 
-1. 창이 뜨고 **손쉬운 사용 권한**을 요청한다. 허용하면 바로 동작한다.
-2. **단축키는 비어 있다.** 키보드 그림에서 빈 키를 눌러 앱을 고른다.
-3. Karabiner-Elements 가 켜져 있으면 경고가 뜬다. 같은 키를 두 도구가 가로채므로
-   빈 프로필로 바꾸거나 꺼야 한다.
+### 2. 권한 허용
 
-이 앱은 **Caps Lock · Right Option · Right Command** 세 키를 가져간다.
+첫 실행이면 창이 뜨고 손쉬운 사용 권한을 요청한다.
+**시스템 설정 › 개인정보 보호 및 보안 › 손쉬운 사용** 에서 CapsLock Control 을 켠다.
+
+허용했는데 단축키가 안 먹으면 **앱을 한 번 껐다 켜자**. macOS 가 권한을 반영하는
+데 재실행이 필요한 경우가 있다.
+
+### 3. Karabiner 를 쓰고 있다면
+
+같은 키를 두 도구가 가로채므로 겹친다. 지울 필요는 없고 **빈 프로필**로 바꾸면 된다.
+
+> Karabiner-Elements 설정 › Profiles › Add profile › 새 프로필 선택
+
+되돌리는 것도 클릭 한 번이다. CapsLock Control 은 다른 앱을 절대 자동 종료하지 않고
+경고만 띄운다.
+
+### 4. 단축키 만들기
+
+**단축키는 비어 있는 상태로 시작한다.** 키보드 그림에서 빈 키를 누르면 앱 피커가
+열린다. 목록에서 고르기만 하면 된다.
+
+### 5. 한/영 전환을 쓰려면 (선택)
+
+이것만 macOS 설정에서 직접 해야 한다.
+
+> 시스템 설정 › 키보드 › 키보드 단축키 › 입력 소스 →
+> **"이전 입력 소스 선택"** 에 **F18** 지정
+
+그러면 오른쪽 ⌘ 로 한/영이 전환된다. 이 설정을 안 하면 오른쪽 ⌘ 만 없어지고
+아무 일도 일어나지 않는다. 오른쪽 ⌘ 를 그냥 쓰고 싶으면
+설정 › 키보드 › Right Command 를 `그대로 두기` 로 바꾼다.
+
+---
+
+### 알아 두면 좋은 것
+
+**이 앱은 세 키를 가져간다** — Caps Lock, Right Option, Right Command.
 Right Command 는 설정에서 끌 수 있지만 앞의 둘은 레이어 키라 고정이다.
+**Caps Lock 은 혼자 짧게 치면 원래 대문자 고정으로 동작**하니 완전히 잃는 건 아니다.
 
-**한/영 전환을 쓰려면** macOS 시스템 설정에서 한 번 지정해야 한다:
-시스템 설정 › 키보드 › 키보드 단축키 › 입력 소스 →
-"이전 입력 소스 선택" 에 **F18** 을 지정. 그래야 Right Command 가 한/영 전환이 된다.
+**Dock 아이콘이 없다.** 메뉴바의 키보드 아이콘을 클릭하면 메뉴가 나온다.
+메뉴바가 꽉 차서 아이콘이 안 보이면, Finder 에서 `/Applications/CapsLockControl.app`
+을 더블클릭하면 창이 열린다. 창 오른쪽 위 ⚙️ 로 설정에 들어간다.
+
+**뭔가 잘못되면** 앱을 종료하면 키보드가 원래대로 돌아간다(⌘Q, 강제 종료 모두).
+그래도 이상하면:
+
+```bash
+make reset-hid     # 또는 hidutil property --set '{"UserKeyMapping":[]}'
+```
+
+재부팅해도 원래대로 돌아온다. 키보드가 잠기는 일은 없다 —
+최악의 경우 Caps Lock 과 Right Option 이 아무 일도 안 하는 상태가 될 뿐이다.
+
+**GitHub 동기화는 선택 사항이다.** Mac 이 하나면 설정하지 않아도 된다.
 
 ## 요구 사항
 
@@ -100,15 +150,17 @@ Dock 아이콘이 없는 메뉴바 전용 앱(`LSUIElement`)이다. 메뉴바 �
 나타낸다 — 권한 없음 / 정지 / 동작 중.
 
 ```
-동작 중 · 단축키 24개
-────────────────────
+동작 중 · 단축키 28개
+────────────────────────────
 ✓ Enabled
-────────────────────
+────────────────────────────
 Open Key Layout...
-Sync: 설정 안 됨
-Settings...            ⌘,
-────────────────────
-Quit CapsLockControl          ⌘Q
+내보낼 변경 있음
+Export to GitHub
+Import from GitHub...
+Settings...                ⌘,
+────────────────────────────
+Quit CapsLock Control      ⌘Q
 ```
 
 평소엔 창을 띄우지 않는다. 다만 **첫 실행**이거나 **손쉬운 사용 권한이 없을 때**는

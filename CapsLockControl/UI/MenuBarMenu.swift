@@ -32,7 +32,7 @@ struct MenuBarMenu: View {
             .keyboardShortcut(",")
 
         Divider()
-        Button("Quit CapsLockControl") { NSApplication.shared.terminate(nil) }
+        Button("Quit CapsLock Control") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
     }
 

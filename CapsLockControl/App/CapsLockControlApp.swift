@@ -11,7 +11,7 @@ struct CapsLockControlApp: App {
             MenuBarLabel(model: appDelegate.model)
         }
 
-        Window("CapsLockControl", id: WindowIdentifier.keyLayout) {
+        Window("CapsLock Control", id: WindowIdentifier.keyLayout) {
             MainWindowView(model: appDelegate.model)
         }
         .windowResizability(.contentMinSize)
