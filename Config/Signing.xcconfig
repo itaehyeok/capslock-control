@@ -1,0 +1,17 @@
+// 코드 서명 설정.
+//
+// 기본값은 ad-hoc 서명(`-`) 이다. Apple 개발자 계정이 없어도 누구나 빌드해서 쓸 수 있다.
+// 다만 ad-hoc 은 빌드할 때마다 서명이 달라져서, 손쉬운 사용 권한을 다시 물어볼 수 있다.
+//
+// 개발자 계정이 있으면 이 폴더에 `Signing.local.xcconfig` 를 만들어 덮어쓴다.
+// 그 파일은 git 에 올라가지 않는다. `Signing.local.xcconfig.example` 를 복사해서 쓰면 된다.
+
+KEYLAYER_CODE_SIGN_IDENTITY = -
+KEYLAYER_DEVELOPMENT_TEAM =
+
+#include? "Signing.local.xcconfig"
+
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = $(KEYLAYER_CODE_SIGN_IDENTITY)
+DEVELOPMENT_TEAM = $(KEYLAYER_DEVELOPMENT_TEAM)
+PROVISIONING_PROFILE_SPECIFIER =

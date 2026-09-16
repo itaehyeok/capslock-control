@@ -1,0 +1,59 @@
+# CapsLockControl 개발용 단축 명령.
+# 빌드 산출물은 프로젝트 안 build/ 로 모은다 (DerivedData 경로 추적이 귀찮아서).
+PROJ  := CapsLockControl.xcodeproj
+SCHEME:= CapsLockControl
+BUILD := $(CURDIR)/build
+APP   := $(BUILD)/Build/Products/Debug/CapsLockControl.app
+
+.PHONY: build run test clean stop reset-hid install icon refresh-icon-cache
+
+build:
+	@xcodebuild -project $(PROJ) -scheme $(SCHEME) -configuration Debug \
+		-derivedDataPath $(BUILD) build | tail -20
+
+run: build stop
+	@open $(APP)
+	@echo "실행: $(APP)"
+
+test:
+	@xcodebuild -project $(PROJ) -scheme $(SCHEME) -configuration Debug \
+		-derivedDataPath $(BUILD) test 2>&1 | tail -40
+
+stop:
+	@pkill -x CapsLockControl 2>/dev/null || true
+	@sleep 0.5
+
+# 로그인 시 자동 실행을 쓰려면 반드시 이 위치에서 실행해야 한다.
+# SMAppService 는 등록 시점의 앱 경로를 기억하기 때문이다.
+install: build stop
+	@rm -rf /Applications/CapsLockControl.app
+	@cp -R $(APP) /Applications/
+	@echo "설치 완료: /Applications/CapsLockControl.app"
+	@open /Applications/CapsLockControl.app
+
+# 앱이 비정상 종료되어 Caps Lock 등이 먹통일 때 수동 복구용.
+# 아이콘을 코드로 그린다. 디자인을 바꾸려면 Tools/make-icon.swift 를 고친다.
+icon:
+	@rm -rf $(BUILD)/AppIcon.iconset
+	@mkdir -p $(BUILD)
+	@xcrun swiftc -O -o $(BUILD)/make-icon Tools/make-icon.swift
+	@$(BUILD)/make-icon $(BUILD)/AppIcon.iconset
+	@cp $(BUILD)/AppIcon.iconset/*.png CapsLockControl/Assets.xcassets/AppIcon.appiconset/
+	@echo "아이콘을 다시 생성했습니다. 이제 make build 하세요."
+	@echo "옛 아이콘이 남으면 LaunchServices 캐시입니다. make refresh-icon-cache"
+
+# 같은 경로에 다시 빌드하면 Finder 와 앱 키캡이 옛 아이콘을 붙들고 있다.
+# 등록을 지웠다 다시 하면 갱신된다.
+LSREG := /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+refresh-icon-cache:
+	@$(LSREG) -u $(APP) 2>/dev/null || true
+	@sleep 1
+	@$(LSREG) -f $(APP) 2>/dev/null || true
+	@echo "아이콘 캐시를 갱신했습니다."
+
+reset-hid:
+	@hidutil property --set '{"UserKeyMapping":[]}' >/dev/null
+	@echo "HID 리맵을 모두 해제했습니다."
+
+clean:
+	@rm -rf $(BUILD)

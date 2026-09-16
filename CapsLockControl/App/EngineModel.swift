@@ -1,0 +1,419 @@
+import AppKit
+import Observation
+import os
+
+/// UI 가 바라보는 엔진 · 설정 상태. 모든 접근은 MainActor.
+@MainActor
+@Observable
+final class EngineModel {
+
+    struct LogEntry: Identifiable, Sendable {
+        let id = UUID()
+        let timestamp: Date
+        let text: String
+    }
+
+    // MARK: - 공개 상태
+
+    private(set) var logEntries: [LogEntry] = []
+    private(set) var activeLayer: LayerKey?
+    private(set) var isEngineRunning = false
+    private(set) var isHIDMappingApplied = false
+    private(set) var hidMappings: [HIDRemapper.Mapping] = []
+    private(set) var isTrusted = AccessibilityPermission.isTrusted
+    private(set) var conflictingApps: [String] = []
+    private(set) var lastError: String?
+
+    private(set) var config: CapsLockControlConfig
+    private(set) var configWarnings: [String] = []
+    private(set) var isConfigReadOnly = false
+    /// 설정에 있지만 이 Mac 에 설치되지 않은 앱들.
+    private(set) var missingApplications: [String] = []
+
+    var configFileURL: URL { store.fileURL }
+
+    // MARK: - 내부
+
+    @ObservationIgnored private let log = Logger(subsystem: "dev.itaehyeok.CapsLockControl", category: "Model")
+    private static let maxLogEntries = 200
+
+    @ObservationIgnored private let store = ConfigStore()
+    @ObservationIgnored private var watchdog: Task<Void, Never>?
+
+    // engine / executor 는 self 를 붙잡는 콜백을 들고 있다.
+    // init 안에서 self 를 캡처할 수 없으므로 lazy 로 미뤄 둔다.
+    // init 끝에서 applyConfigToEngine() 이 호출되는 순간 만들어진다.
+    @ObservationIgnored private lazy var executor = ActionExecutor { [weak self] outcome in
+        switch outcome {
+        case .succeeded(let name): self?.appendLog("→ \(name)")
+        case .failed(let message): self?.appendLog("⚠︎ \(message)")
+        }
+    }
+
+    /// GitHub 설정 동기화. 설정 폴더 옆 `sync/` 에 clone 을 둔다.
+    /// 설정 폴더 자체를 저장소로 만들지 않는 이유는, git 이 파일을 갈아치우는 동안
+    /// 앱의 파일 감시자가 중간 상태를 읽을 수 있기 때문이다.
+    @ObservationIgnored private(set) lazy var sync: SyncController = {
+        let controller = SyncController(
+            directory: store.directoryURL.appendingPathComponent("sync", isDirectory: true))
+        controller.owner = self
+        return controller
+    }()
+
+    @ObservationIgnored private lazy var engine = KeyboardEngine(
+        observer: { [weak self] event in
+            Task { @MainActor in self?.handle(event) }
+        },
+        executeAction: { [weak self] _, _, action in
+            Task { @MainActor in self?.executor.perform(action) }
+        }
+    )
+
+    init() {
+        let loaded = store.load(default: DefaultConfiguration.make)
+        config = loaded.config
+        configWarnings = loaded.warnings
+        isConfigReadOnly = loaded.isReadOnly
+
+        if loaded.didCreateFile {
+            appendLog("설정 파일을 새로 만들었습니다: \(store.fileURL.path)")
+        }
+        for warning in loaded.warnings { appendLog("⚠︎ \(warning)") }
+
+        applyConfigToEngine()
+        startWatchingConfigFile()
+        // lazy 로 만들어 두면 UI 가 처음 읽을 때까지 owner 가 비어 있다.
+        _ = sync
+    }
+
+    // MARK: - 설정
+
+    private func applyConfigToEngine() {
+        let (table, warnings) = config.makeBindingTable()
+        engine.updateConfiguration(
+            bindings: table,
+            hidMappings: HIDRemapper.mappings(for: config),
+            options: EngineOptions(config: config)
+        )
+        executor.defaultWhenAlreadyActive = config.defaults.whenAlreadyActive
+        hidMappings = engine.hidMappings
+        for warning in warnings where !configWarnings.contains(warning) {
+            configWarnings.append(warning)
+            appendLog("⚠︎ \(warning)")
+        }
+        refreshMissingApplications()
+    }
+
+    /// 사람이 파일을 직접 고쳤을 때, 또는 "다시 불러오기" 버튼.
+    func reloadConfig() {
+        let loaded = store.load(default: DefaultConfiguration.make)
+        // 우리가 방금 저장해서 생긴 변경이면 아무 일도 하지 않는다.
+        guard loaded.config != config else { return }
+        config = loaded.config
+        configWarnings = loaded.warnings
+        isConfigReadOnly = loaded.isReadOnly
+        applyConfigToEngine()
+        appendLog("설정을 다시 불러왔습니다 (단축키 \(engine.bindingCount)개).")
+    }
+
+    /// 되돌릴 수 없는 변경 직전에 지금 설정을 파일로 남긴다.
+    @discardableResult
+    func backUpCurrentConfig(reason: String) -> URL? {
+        do {
+            return try store.writeBackup(config, reason: reason)
+        } catch {
+            appendLog("⚠︎ 백업을 만들지 못했습니다: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    var backupDirectoryURL: URL { store.backupDirectoryURL }
+
+    /// 설정 파일이 읽기 전용이면 GUI 편집을 막는다.
+    var isEditable: Bool { !isConfigReadOnly }
+
+    /// 키 하나에 동작을 걸거나(action) 지운다(nil). 즉시 파일에 저장된다.
+    func setAction(_ action: ShortcutAction?, layer: LayerKey, keyIdentifier: String) {
+        var updated = config
+        updated.setAction(action, layer: layer, keyIdentifier: keyIdentifier)
+        saveConfig(updated)
+    }
+
+    /// 키캡을 다른 키로 끌어다 놓았을 때. 양쪽 동작을 맞바꾼다(한쪽이 비면 이동).
+    /// 저장은 한 번만 일어난다.
+    func swapActions(_ first: String, _ second: String, layer: LayerKey) {
+        var updated = config
+        updated.swapActions(first, second, layer: layer)
+        guard updated != config else { return }
+        saveConfig(updated)
+    }
+
+    func setWhenAlreadyActiveDefault(_ behavior: AlreadyActiveBehavior) {
+        guard config.defaults.whenAlreadyActive != behavior else { return }
+        var updated = config
+        updated.defaults.whenAlreadyActive = behavior
+        saveConfig(updated)
+    }
+
+    /// Right Command 를 F18 로 쓸지 그대로 둘지. HID 매핑이 즉시 다시 걸린다.
+    func setRightCommandAction(_ action: RightCommandAction) {
+        guard config.rightCommand.action != action else { return }
+        var updated = config
+        updated.rightCommand.action = action
+        saveConfig(updated)
+    }
+
+    func setUnmappedKeyPolicy(_ policy: UnmappedKeyPolicy) {
+        guard config.defaults.unmappedKeyPolicy != policy else { return }
+        var updated = config
+        updated.defaults.unmappedKeyPolicy = policy
+        saveConfig(updated)
+    }
+
+    /// fn 과 왼쪽 Control 맞바꾸기 on/off. 저장하면 HID 매핑이 즉시 다시 걸린다.
+    func setSwapFnAndLeftControl(_ enabled: Bool) {
+        guard config.modifiers.swapFnAndLeftControl != enabled else { return }
+        var updated = config
+        updated.modifiers.swapFnAndLeftControl = enabled
+        saveConfig(updated)
+    }
+
+    /// 보낼 조합에 이름을 붙인다. 키캡에 "A" 대신 "NoCan 토글" 이 보이게 된다.
+    func setKeyStrokeLabel(_ label: String?, layer: LayerKey, keyIdentifier: String) {
+        guard case .keyStroke(var stroke) = config.action(layer: layer, keyIdentifier: keyIdentifier)
+        else { return }
+        let trimmed = label?.trimmingCharacters(in: .whitespacesAndNewlines)
+        stroke.label = (trimmed?.isEmpty ?? true) ? nil : trimmed
+        setAction(.keyStroke(stroke), layer: layer, keyIdentifier: keyIdentifier)
+    }
+
+    /// 키별 "이미 맨 앞일 때" 동작. nil 이면 전역 기본값을 따른다.
+    func setWhenAlreadyActive(
+        _ behavior: AlreadyActiveBehavior?,
+        layer: LayerKey,
+        keyIdentifier: String
+    ) {
+        guard var target = config.action(layer: layer, keyIdentifier: keyIdentifier)?
+            .applicationTarget else { return }
+        target.whenAlreadyActive = behavior
+        setAction(.application(target), layer: layer, keyIdentifier: keyIdentifier)
+    }
+
+    /// 저장 경로. GUI 편집과 수동 편집이 같은 함수를 쓴다.
+    func saveConfig(_ newConfig: CapsLockControlConfig) {
+        guard !isConfigReadOnly else {
+            lastError = "설정 파일이 읽기 전용 상태입니다. 저장하지 않았습니다."
+            return
+        }
+        do {
+            try store.save(newConfig)
+            config = newConfig
+            applyConfigToEngine()
+            appendLog("설정을 저장했습니다.")
+        } catch {
+            lastError = error.localizedDescription
+            appendLog("⚠︎ \(error.localizedDescription)")
+        }
+    }
+
+    private func startWatchingConfigFile() {
+        store.startWatching { [weak self] in
+            Task { @MainActor in self?.reloadConfig() }
+        }
+    }
+
+    func revealConfigInFinder() {
+        NSWorkspace.shared.activateFileViewerSelecting([store.fileURL])
+    }
+
+    /// 설치 여부는 LaunchServices 조회라서 뷰 본문에서 매번 부르면 안 된다.
+    /// 설정이 바뀔 때 한 번만 계산해 두고 캐시를 본다.
+    @ObservationIgnored private var missingBundleIdentifiers: Set<String> = []
+
+    private func refreshMissingApplications() {
+        var missingIDs: Set<String> = []
+        var missingNames: Set<String> = []
+        for layer in LayerKey.allCases {
+            for binding in config.sortedBindings(for: layer) {
+                guard let target = binding.action.applicationTarget else { continue }
+                guard !DefaultConfiguration.isInstalled(bundleIdentifier: target.bundleIdentifier)
+                else { continue }
+                missingIDs.insert(target.bundleIdentifier)
+                missingNames.insert(target.displayName.isEmpty
+                                    ? target.bundleIdentifier : target.displayName)
+            }
+        }
+        missingBundleIdentifiers = missingIDs
+        missingApplications = missingNames.sorted()
+        AppIconProvider.shared.invalidate()
+    }
+
+    func isInstalled(_ action: ShortcutAction) -> Bool {
+        guard let target = action.applicationTarget else { return true }
+        return !missingBundleIdentifiers.contains(target.bundleIdentifier)
+    }
+
+    var bindingCount: Int { engine.bindingCount }
+
+    // MARK: - 엔진 제어
+
+    func startIfPossible() {
+        guard !engine.isRunning else { return }
+        guard AccessibilityPermission.isTrusted else {
+            isTrusted = false
+            startPermissionWatchdog()
+            return
+        }
+        do {
+            try engine.start()
+            lastError = nil
+            appendLog("엔진을 시작했습니다 (단축키 \(engine.bindingCount)개).")
+        } catch {
+            lastError = error.localizedDescription
+            appendLog("⚠︎ 엔진 시작 실패: \(error.localizedDescription)")
+        }
+        refreshStatus()
+    }
+
+    func stop() {
+        engine.stop()
+        refreshStatus()
+        appendLog("엔진을 정지했습니다. 키보드가 원래대로 돌아갑니다.")
+    }
+
+    func toggle() {
+        if isEngineRunning { stop() } else { startIfPossible() }
+    }
+
+    func reapplyAfterWake() {
+        engine.reapplyHIDMapping()
+        refreshStatus()
+    }
+
+    /// 앱이 비정상 종료된 뒤 HID 매핑이 남았을 때의 수동 복구.
+    func forceResetHIDMapping() {
+        HIDRemapper().remove()
+        refreshStatus()
+        appendLog("HID 매핑을 강제로 해제했습니다.")
+    }
+
+    func requestAccessibilityPermission() {
+        AccessibilityPermission.promptIfNeeded()
+        AccessibilityPermission.openSystemSettings()
+        startPermissionWatchdog()
+    }
+
+    func clearLog() { logEntries.removeAll() }
+
+    /// UI 조작을 로그에 남긴다. 클릭이 먹었는지 눈으로 확인할 수 있게.
+    func note(_ text: String) { appendLog(text) }
+
+    // MARK: - 상태 갱신
+
+    private func refreshStatus() {
+        isEngineRunning = engine.isRunning
+        isHIDMappingApplied = engine.isHIDMappingApplied
+        hidMappings = engine.hidMappings
+        activeLayer = engine.activeLayer
+        isTrusted = AccessibilityPermission.isTrusted
+    }
+
+    /// 권한 허용 여부를 알려 주는 알림이 없어서 짧게 폴링한다.
+    /// 허용되는 순간 자동으로 엔진을 띄운다.
+    private func startPermissionWatchdog() {
+        guard watchdog == nil else { return }
+        watchdog = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard let self else { return }
+                if AccessibilityPermission.isTrusted {
+                    self.isTrusted = true
+                    self.watchdog = nil
+                    self.startIfPossible()
+                    return
+                }
+            }
+        }
+    }
+
+    func refreshConflictingApps() {
+        // 죽이지 않는다. 알려만 준다.
+        let watched: [(String, String)] = [
+            ("org.pqrs.Karabiner-Elements.Settings", "Karabiner-Elements"),
+            ("org.pqrs.Karabiner-EventViewer", "Karabiner-EventViewer"),
+        ]
+        let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+        var names = watched.filter { running.contains($0.0) }.map(\.1)
+        // Karabiner 는 GUI 를 닫아도 백그라운드 데몬이 남아 있으면 계속 개입한다.
+        if !names.contains("Karabiner-Elements"), isKarabinerDaemonRunning() {
+            names.append("Karabiner (백그라운드 데몬)")
+        }
+        conflictingApps = names
+    }
+
+    private func isKarabinerDaemonRunning() -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
+        process.arguments = ["-f", "karabiner_grabber"]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            return false
+        }
+    }
+
+    // MARK: - 엔진 이벤트
+
+    private func handle(_ event: EngineEvent) {
+        switch event {
+        case .layerChanged(let layer):
+            activeLayer = layer
+            appendLog(layer.map { "\($0.shortName) 레이어 ON" } ?? "레이어 OFF")
+        case .performed(let layer, let key, let action):
+            let keyLabel = KeyCodeTable.entry(for: key)?.label ?? "?"
+            appendLog("\(layer.shortName) + \(keyLabel) → \(action.displayName)")
+        case .swallowedUnmapped(let layer, let key):
+            let keyLabel = KeyCodeTable.entry(for: key)?.label ?? "keycode \(key.rawValue)"
+            appendLog("\(layer.shortName) + \(keyLabel) (등록 없음 · 무시)")
+        case .stateReset(let reason):
+            appendLog("상태 초기화: \(reason)")
+        case .layerTapped(let layer):
+            handleLayerTap(layer)
+        case .hidMappingStateChanged(let isApplied, let errorMessage):
+            isHIDMappingApplied = isApplied
+            hidMappings = engine.hidMappings
+            if let errorMessage {
+                lastError = errorMessage
+                appendLog("⚠︎ \(errorMessage)")
+            }
+        }
+    }
+
+    /// Caps Lock 을 단독으로 짧게 눌렀다 뗐을 때. 원래 기능을 토글한다.
+    private func handleLayerTap(_ layer: LayerKey) {
+        guard layer == .capsLock else { return }
+        guard let isOn = CapsLockState.toggle() else {
+            appendLog("⚠︎ Caps Lock 상태를 바꾸지 못했습니다")
+            return
+        }
+        appendLog("Caps Lock \(isOn ? "켜짐" : "꺼짐")")
+    }
+
+    func setCapsLockTapEnabled(_ enabled: Bool) {
+        guard config.defaults.capsLockTapTogglesCapsLock != enabled else { return }
+        var updated = config
+        updated.defaults.capsLockTapTogglesCapsLock = enabled
+        saveConfig(updated)
+    }
+
+    private func appendLog(_ text: String) {
+        logEntries.append(LogEntry(timestamp: Date(), text: text))
+        if logEntries.count > Self.maxLogEntries {
+            logEntries.removeFirst(logEntries.count - Self.maxLogEntries)
+        }
+    }
+}

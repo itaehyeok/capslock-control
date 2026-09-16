@@ -1,0 +1,9 @@
+// 이 파일을 `Signing.local.xcconfig` 로 복사하고 자기 값으로 바꾼다.
+// 개발자 계정이 없으면 만들 필요 없다. 기본 ad-hoc 서명으로도 동작한다.
+//
+// 팀 ID 확인:
+//   security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject
+//   → OU=... 가 팀 ID
+
+KEYLAYER_CODE_SIGN_IDENTITY = Apple Development
+KEYLAYER_DEVELOPMENT_TEAM = XXXXXXXXXX

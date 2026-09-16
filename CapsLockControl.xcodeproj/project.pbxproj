@@ -1,0 +1,359 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXFileReference section */
+		FF00000000000000000000E1 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Signing.xcconfig; path = Config/Signing.xcconfig; sourceTree = "<group>"; };
+		FF00000000000000000000A2 /* CapsLockControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CapsLockControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FF00000000000000000000C2 /* CapsLockControlTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CapsLockControlTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		FF00000000000000000000A6 /* CapsLockControl */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CapsLockControl;
+			sourceTree = "<group>";
+		};
+		FF00000000000000000000C6 /* CapsLockControlTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CapsLockControlTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		FF00000000000000000000A4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FF00000000000000000000C4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		FF00000000000000000000F2 = {
+			isa = PBXGroup;
+			children = (
+				FF00000000000000000000E1 /* Signing.xcconfig */,
+				FF00000000000000000000A6 /* CapsLockControl */,
+				FF00000000000000000000C6 /* CapsLockControlTests */,
+				FF00000000000000000000F3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		FF00000000000000000000F3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FF00000000000000000000A2 /* CapsLockControl.app */,
+				FF00000000000000000000C2 /* CapsLockControlTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FF00000000000000000000A1 /* CapsLockControl */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FF00000000000000000000B4 /* Build configuration list for PBXNativeTarget "CapsLockControl" */;
+			buildPhases = (
+				FF00000000000000000000A3 /* Sources */,
+				FF00000000000000000000A4 /* Frameworks */,
+				FF00000000000000000000A5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				FF00000000000000000000A6 /* CapsLockControl */,
+			);
+			name = CapsLockControl;
+			packageProductDependencies = (
+			);
+			productName = CapsLockControl;
+			productReference = FF00000000000000000000A2 /* CapsLockControl.app */;
+			productType = "com.apple.product-type.application";
+		};
+		FF00000000000000000000C1 /* CapsLockControlTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FF00000000000000000000C7 /* Build configuration list for PBXNativeTarget "CapsLockControlTests" */;
+			buildPhases = (
+				FF00000000000000000000C3 /* Sources */,
+				FF00000000000000000000C4 /* Frameworks */,
+				FF00000000000000000000C5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FF00000000000000000000D1 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				FF00000000000000000000C6 /* CapsLockControlTests */,
+			);
+			name = CapsLockControlTests;
+			packageProductDependencies = (
+			);
+			productName = CapsLockControlTests;
+			productReference = FF00000000000000000000C2 /* CapsLockControlTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FF00000000000000000000F1 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2650;
+				LastUpgradeCheck = 2650;
+				TargetAttributes = {
+					FF00000000000000000000A1 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					FF00000000000000000000C1 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = FF00000000000000000000A1;
+					};
+				};
+			};
+			buildConfigurationList = FF00000000000000000000B1 /* Build configuration list for PBXProject "CapsLockControl" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = FF00000000000000000000F2;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = FF00000000000000000000F3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FF00000000000000000000A1 /* CapsLockControl */,
+				FF00000000000000000000C1 /* CapsLockControlTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		FF00000000000000000000A5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FF00000000000000000000C5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		FF00000000000000000000A3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FF00000000000000000000C3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		FF00000000000000000000D1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FF00000000000000000000A1 /* CapsLockControl */;
+			targetProxy = FF00000000000000000000D2 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXContainerItemProxy section */
+		FF00000000000000000000D2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FF00000000000000000000F1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FF00000000000000000000A1;
+			remoteInfo = CapsLockControl;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin XCBuildConfiguration section */
+		FF00000000000000000000B2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		FF00000000000000000000B3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		FF00000000000000000000B5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = FF00000000000000000000E1 /* Signing.xcconfig */;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "CapsLock Control";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "CapsLockControl는 Spotify 전용 미디어 단축키를 사용할 때만 Spotify에 명령을 보냅니다.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.itaehyeok.CapsLockControl;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+		FF00000000000000000000B6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = FF00000000000000000000E1 /* Signing.xcconfig */;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "CapsLock Control";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "CapsLockControl는 Spotify 전용 미디어 단축키를 사용할 때만 Spotify에 명령을 보냅니다.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.itaehyeok.CapsLockControl;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
+		FF00000000000000000000C8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = FF00000000000000000000E1 /* Signing.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.itaehyeok.CapsLockControlTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CapsLockControl.app/Contents/MacOS/CapsLockControl";
+			};
+			name = Debug;
+		};
+		FF00000000000000000000C9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = FF00000000000000000000E1 /* Signing.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.itaehyeok.CapsLockControlTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CapsLockControl.app/Contents/MacOS/CapsLockControl";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		FF00000000000000000000B1 /* Build configuration list for PBXProject "CapsLockControl" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF00000000000000000000B2 /* Debug */,
+				FF00000000000000000000B3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FF00000000000000000000B4 /* Build configuration list for PBXNativeTarget "CapsLockControl" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF00000000000000000000B5 /* Debug */,
+				FF00000000000000000000B6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FF00000000000000000000C7 /* Build configuration list for PBXNativeTarget "CapsLockControlTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF00000000000000000000C8 /* Debug */,
+				FF00000000000000000000C9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = FF00000000000000000000F1 /* Project object */;
+}
