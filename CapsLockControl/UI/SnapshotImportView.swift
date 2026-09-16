@@ -79,10 +79,11 @@ struct SnapshotImportView: View {
     private var snapshotPicker: some View {
         HStack(spacing: 8) {
             if sync.snapshots.isEmpty {
-                Text(sync.isWorking
-                     ? "목록을 가져오는 중..."
-                     : "올라간 스냅샷이 없습니다. 먼저 Export 해 주세요.")
-                    .font(.callout).foregroundStyle(.secondary)
+                // 실패했는데 "스냅샷 없음" 으로 보이면 원인을 영영 못 찾는다.
+                // 진짜 오류는 설정 창에만 있었고 그 창은 이 시트에 가려진다.
+                Text(snapshotListStatus)
+                    .font(.callout)
+                    .foregroundStyle(hasListFailure ? Color.red : Color.secondary)
             } else {
                 Picker("스냅샷", selection: Binding(
                     get: { selectedSnapshot },
@@ -124,9 +125,27 @@ struct SnapshotImportView: View {
 
     // MARK: - 차이 목록 (좌우 비교)
 
+    private var hasListFailure: Bool {
+        if case .failed = sync.state { return true }
+        return false
+    }
+
+    private var listFailureMessage: String? {
+        if case .failed(let message) = sync.state { return message }
+        return nil
+    }
+
+    private var snapshotListStatus: String {
+        if sync.isWorking { return "목록을 가져오는 중..." }
+        if hasListFailure { return "목록을 가져오지 못했습니다" }
+        return "올라간 스냅샷이 없습니다. 먼저 Export 해 주세요."
+    }
+
     @ViewBuilder
     private var diffList: some View {
-        if isLoadingDiff {
+        if let message = listFailureMessage, sync.snapshots.isEmpty {
+            failureDetail(message)
+        } else if isLoadingDiff {
             centered { ProgressView() }
         } else if selectedSnapshot == nil {
             centered { Text("스냅샷을 고르세요").font(.callout).foregroundStyle(.secondary) }
@@ -296,6 +315,36 @@ struct SnapshotImportView: View {
             for item in groupItems { selectedIDs.remove(item.id) }
         } else {
             for item in groupItems { selectedIDs.insert(item.id) }
+        }
+    }
+
+    /// 무엇이 잘못됐는지 이 화면에서 바로 보여 준다.
+    private func failureDetail(_ message: String) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
+                    Text("GitHub 에서 목록을 가져오지 못했습니다")
+                        .font(.callout).bold()
+                }
+                Text(message)
+                    .font(.caption).monospaced()
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(.secondary)
+                Divider()
+                Text("저장소 주소는 설정 › 동기화에서 고칩니다. 이 Mac 에 GitHub SSH 키가 "
+                     + "없다면 공개 저장소에 한해 https 주소로도 가져올 수 있습니다 "
+                     + "(내보내기는 인증이 필요합니다).")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("다시 시도") {
+                    Task { await sync.refreshSnapshots() }
+                }
+                .controlSize(.small)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
         }
     }
 
