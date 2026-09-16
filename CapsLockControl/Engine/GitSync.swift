@@ -80,6 +80,42 @@ actor GitSync {
         directory.appendingPathComponent(Self.snapshotDirectoryName, isDirectory: true)
     }
 
+    /// git 이 따옴표로 감싼 경로를 원래대로 되돌린다.
+    ///
+    /// `core.quotepath=false` 로 대부분 막히지만, 따옴표나 제어문자가 든 경로는
+    /// 설정과 무관하게 감싸져 나온다. 출력 형식을 한 군데서 정규화해 둔다.
+    nonisolated static func unquotePath(_ raw: String) -> String {
+        guard raw.count >= 2, raw.hasPrefix("\""), raw.hasSuffix("\"") else { return raw }
+        let characters = Array(raw.dropFirst().dropLast())
+        var bytes: [UInt8] = []
+        var index = 0
+        while index < characters.count {
+            guard characters[index] == "\\", index + 1 < characters.count else {
+                bytes.append(contentsOf: Array(String(characters[index]).utf8))
+                index += 1
+                continue
+            }
+            let next = characters[index + 1]
+            // \354 처럼 8진수 세 자리가 오면 바이트 하나다.
+            if next.isNumber, index + 3 < characters.count,
+               let value = UInt8(String(characters[(index + 1)...(index + 3)]), radix: 8) {
+                bytes.append(value)
+                index += 4
+                continue
+            }
+            switch next {
+            case "n": bytes.append(0x0A)
+            case "t": bytes.append(0x09)
+            case "r": bytes.append(0x0D)
+            case "\\": bytes.append(0x5C)
+            case "\"": bytes.append(0x22)
+            default: bytes.append(contentsOf: Array(String(next).utf8))
+            }
+            index += 2
+        }
+        return String(decoding: bytes, as: UTF8.self)
+    }
+
     /// 정렬 가능하고 사람이 읽을 수 있는 파일명. 콜론과 공백은 쓰지 않는다.
     private static let snapshotDateFormat = "yyyy-MM-dd_HHmmss"
 
@@ -90,10 +126,18 @@ actor GitSync {
         return formatter
     }
 
+    /// Mac 이름을 파일명에 쓸 수 있게 다듬는다.
+    ///
+    /// **ASCII 만 남긴다.** `CharacterSet.alphanumerics` 는 한글도 통과시키는데,
+    /// 그러면 `user의-MacBook-Pro.json` 같은 이름이 만들어지고 git 이 그 경로를
+    /// 따옴표로 감싸 내놓는 설정(기본값)에서 목록 파싱이 깨진다.
     private static func sanitize(_ name: String) -> String {
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-"))
-        let mapped = name.unicodeScalars.map { allowed.contains($0) ? Character($0) : "-" }
-        return String(mapped).trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+        let allowed = Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-")
+        let mapped = name.map { allowed.contains($0) ? $0 : "-" }
+        let collapsed = String(mapped)
+            .split(separator: "-", omittingEmptySubsequences: true)
+            .joined(separator: "-")
+        return collapsed.isEmpty ? "mac" : collapsed
     }
 
     // MARK: - 준비
@@ -157,15 +201,16 @@ actor GitSync {
         // 처음 clone 했을 때는 비어 있던 저장소가 그 사이 채워졌을 수 있다.
         branch = await resolveBranch()
         guard await revisionExists("origin/\(branch)") else { return [] }
-        guard let output = try? await run([
+        // 실패를 빈 목록으로 삼키면 "스냅샷이 없다" 와 구분이 안 된다.
+        let output = try await run([
             "ls-tree", "-r", "--name-only", "origin/\(branch)",
             "--", Self.snapshotDirectoryName,
-        ]) else { return [] }
+        ])
 
         let formatter = Self.makeFormatter()
         return output
             .split(separator: "\n")
-            .map(String.init)
+            .map { Self.unquotePath(String($0)) }
             .filter { $0.hasSuffix(".json") }
             .map { path -> SnapshotRef in
                 // snapshots/2026-09-11_153045_my-mbp.json
@@ -272,7 +317,10 @@ actor GitSync {
     ) throws -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        process.arguments = arguments
+        // core.quotepath 가 켜져 있으면(기본값) 경로에 ASCII 가 아닌 글자가 있을 때
+        // git 이 따옴표로 감싸고 8진 이스케이프해서 내놓는다. 사용자 설정에 따라
+        // 출력이 달라지면 안 되므로 항상 끄고 부른다.
+        process.arguments = ["-c", "core.quotepath=false"] + arguments
 
         var environment = ProcessInfo.processInfo.environment
         // 비밀번호·통과구문 프롬프트로 멈추지 않게 한다. 멈추면 UI 가 영원히 기다린다.

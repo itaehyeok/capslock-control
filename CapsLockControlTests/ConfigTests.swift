@@ -380,3 +380,35 @@ struct KeyStrokeTests {
         #expect(table.count == 1)
     }
 }
+
+@Suite("git 경로 파싱")
+struct GitPathParsingTests {
+
+    @Test("ASCII 경로는 그대로 돌려준다")
+    func plainPathIsUnchanged() {
+        let path = "snapshots/2026-09-16_101834_my-macbook.json"
+        #expect(GitSync.unquotePath(path) == path)
+    }
+
+    @Test("따옴표로 감싸고 8진 이스케이프한 한글 경로를 되돌린다")
+    func quotedKoreanPathIsDecoded() {
+        // core.quotepath 기본값(true)에서 git 이 내놓는 형태.
+        // 이걸 못 되돌려서 스냅샷 목록이 통째로 비어 보였다.
+        let raw = "\"snapshots/2026-09-14_105547_user\\354\\235\\230-MacBook-Pro.json\""
+        let decoded = GitSync.unquotePath(raw)
+        #expect(decoded == "snapshots/2026-09-14_105547_user의-MacBook-Pro.json")
+        #expect(decoded.hasSuffix(".json"))
+    }
+
+    @Test("이스케이프된 따옴표와 역슬래시를 되돌린다")
+    func escapedCharactersAreDecoded() {
+        #expect(GitSync.unquotePath("\"a\\\"b.json\"") == "a\"b.json")
+        #expect(GitSync.unquotePath("\"a\\\\b.json\"") == "a\\b.json")
+    }
+
+    @Test("따옴표가 한쪽만 있으면 건드리지 않는다")
+    func halfQuotedIsLeftAlone() {
+        #expect(GitSync.unquotePath("\"broken.json") == "\"broken.json")
+        #expect(GitSync.unquotePath("") == "")
+    }
+}
