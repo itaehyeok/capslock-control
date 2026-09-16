@@ -47,6 +47,22 @@ final class ApplicationCatalog {
                 )
             }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        includeSelf()
+    }
+
+    /// 이 앱은 메뉴바 전용(`.accessory`)이라 위 필터에 걸려 빠진다.
+    /// 자기 자신에게 단축키를 거는 건 정상적인 용도(창 열기/숨기기)라 직접 넣어 준다.
+    /// 빌드 폴더에 있든 /Applications 에 있든 `Bundle.main` 이 알아서 가리킨다.
+    private func includeSelf() {
+        guard let identifier = Bundle.main.bundleIdentifier,
+              !running.contains(where: { $0.bundleIdentifier == identifier }) else { return }
+        let name = (Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+            ?? (Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String)
+            ?? Bundle.main.bundleURL.deletingPathExtension().lastPathComponent
+        running.append(Entry(bundleIdentifier: identifier,
+                             name: name,
+                             bundleURLPath: Bundle.main.bundleURL.path))
+        running.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     private func observeWorkspace() {

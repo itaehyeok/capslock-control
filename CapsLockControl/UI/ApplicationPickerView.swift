@@ -15,12 +15,27 @@ struct ApplicationPickerView: View {
 
     @State private var query = ""
     @FocusState private var isSearchFocused: Bool
+    /// 이미 이 레이어에 걸린 앱을 목록에서 뺀다. 기본으로 켜 둔다 —
+    /// 대부분은 새 앱을 찾으러 오지, 이미 건 앱을 다시 찾으러 오지 않는다.
+    @AppStorage("picker.hideAssignedApps") private var hideAssignedApps = true
 
     private var catalog: ApplicationCatalog { .shared }
 
     private var results: (running: [ApplicationCatalog.Entry],
                           installed: [ApplicationCatalog.Entry]) {
-        catalog.search(query)
+        let found = catalog.search(query)
+        guard hideAssignedApps else { return found }
+        let assigned = assignedKeyLabels
+        return (found.running.filter { assigned[$0.bundleIdentifier] == nil },
+                found.installed.filter { assigned[$0.bundleIdentifier] == nil })
+    }
+
+    private var hiddenCount: Int {
+        guard hideAssignedApps else { return 0 }
+        let all = catalog.search(query)
+        let assigned = assignedKeyLabels
+        return (all.running + all.installed)
+            .filter { assigned[$0.bundleIdentifier] != nil }.count
     }
 
     private var mediaMatches: [(command: MediaCommand, label: String)] {
@@ -50,6 +65,7 @@ struct ApplicationPickerView: View {
             header
             Divider()
             searchField
+            filterBar
             Divider()
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -108,6 +124,21 @@ struct ApplicationPickerView: View {
             }
         }
         .padding(10)
+    }
+
+    private var filterBar: some View {
+        HStack(spacing: 6) {
+            Toggle("이미 할당된 앱 숨기기", isOn: $hideAssignedApps)
+                .toggleStyle(.checkbox)
+                .font(.caption)
+            if hiddenCount > 0 {
+                Text("\(hiddenCount)개 숨김")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 10)
+        .padding(.bottom, 8)
     }
 
     /// Enter 를 누르면 첫 결과를 고른다.
