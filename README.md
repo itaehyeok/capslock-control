@@ -1,7 +1,592 @@
-# CapsLockControl
+# CapsLock Control
 
-Karabiner-Elements 와 Raycast 의 "실제로 쓰는 기능"만 대체하는 macOS 메뉴바 유틸리티.
-Karabiner 클론도, Raycast 클론도 아니다. 외부 의존성 없이 Apple framework 만 쓴다.
+**English** · [한국어](#한국어)
+
+A macOS menu bar utility that replaces the handful of Karabiner-Elements and
+Raycast features I actually use. It is not a clone of either. No third-party
+dependencies — Apple frameworks only.
+
+## What it does
+
+**Keyboard**
+
+- **Caps Lock and Right Option each become an independent layer key.**
+  `Caps + C` and `Right Option + C` are completely different shortcuts.
+- **Tap Caps Lock alone and it still toggles caps lock.** Hold it with another
+  key and it is a layer; tap it by itself and it is Caps Lock.
+- **Right Command → F18** for input-source switching (uses the macOS shortcut).
+- **Swap fn ↔ Left Control** (optional).
+- Unassigned keys are swallowed so **no stray characters get typed**.
+  The policy is configurable.
+
+**What a shortcut can do**
+
+- **Launch or focus an app** — brings it forward if running, launches it otherwise.
+- **Press the same key again to toggle** — hides the app or returns to the previous
+  one. Configurable per key.
+- **Media control** — play/pause, next, previous. Whatever is playing receives it.
+- **Trigger another app's global hotkey** — presses a combination like `⌃⌥⇧A` for you.
+  Caps Lock is not a modifier, so other apps cannot register it directly;
+  this is the way around that.
+
+**Editing**
+
+- **A keyboard editor shaped like a real MacBook.** Click an empty key to open the
+  app picker; drag a keycap onto another key to move it (the two swap).
+- The picker filters **running and installed apps** as you type, one character at a
+  time. You never type a path or a bundle ID.
+- Apps that are not installed show as **Missing**.
+- Switch between `full keyboard` and `assignable keys only` layouts.
+
+**Configuration and sync**
+
+- Configuration is human-readable **JSON**. Edit it by hand and it is
+  **picked up immediately, no restart**.
+- Writes are atomic. A corrupted file is backed up rather than deleted, and the
+  app starts from defaults.
+- **Sync between Macs through GitHub** — Export pushes a new snapshot stamped with
+  the time and the Mac's name (nothing is ever deleted); Import lets you pick one
+  and **check off individual items** to pull in. A local backup is always written first.
+- No tokens or keys are stored. It reuses the SSH authentication already on the machine.
+
+**How it behaves**
+
+- **Menu bar only**, no Dock icon. Launches at login via `SMAppService`.
+- No virtual HID driver. Just Apple's own `hidutil` remapping plus a thin `CGEventTap`.
+- **Quitting the app restores the keyboard**, whether by ⌘Q or a forced kill (SIGTERM).
+
+## Getting started
+
+### 1. Install
+
+**Xcode 26 or newer is required.** Command Line Tools alone will not do.
+
+```bash
+git clone https://github.com/itaehyeok/capslock-control.git
+cd capslock-control
+make install
+```
+
+`make install` builds it, puts it in `/Applications`, and launches it.
+You do not need an Apple Developer account (it falls back to ad-hoc signing).
+
+> If you do have one, copy `Config/Signing.local.xcconfig.example` to
+> `Signing.local.xcconfig` and put your team ID in it. A stable signature means
+> **macOS stops re-asking for Accessibility permission.** Ad-hoc signatures change
+> on every build, so the prompt can come back.
+
+### 2. Grant permission
+
+On first launch a window appears and asks for Accessibility permission.
+Turn on CapsLock Control in
+**System Settings › Privacy & Security › Accessibility**.
+
+If you granted it but shortcuts still do nothing, **quit and reopen the app**.
+macOS sometimes needs a relaunch before the grant takes effect.
+
+### 3. If you use Karabiner
+
+Two tools grabbing the same keys will collide. You do not have to uninstall it —
+switch to an **empty profile**.
+
+> Karabiner-Elements Settings › Profiles › Add profile › select the new one
+
+Switching back is one click. CapsLock Control never quits another app on its own;
+it only shows a warning.
+
+### 4. Create shortcuts
+
+**You start with an empty layout.** Click any blank key in the keyboard picture and
+the app picker opens. Pick from the list — that is all.
+
+### 5. Input-source switching (optional)
+
+This is the one thing you must set in macOS yourself.
+
+> System Settings › Keyboard › Keyboard Shortcuts › Input Sources →
+> assign **F18** to **"Select the previous input source"**
+
+Then Right ⌘ switches input sources. Without this, Right ⌘ simply stops doing
+anything. If you would rather keep Right ⌘ as a normal modifier, set
+Settings › Keyboard › Right Command to `Leave alone`.
+
+---
+
+### Worth knowing
+
+**This app takes over three keys** — Caps Lock, Right Option, Right Command.
+Right Command can be switched off in Settings; the other two are layer keys and
+are fixed. **Caps Lock still works as Caps Lock when tapped alone**, so you do not
+lose it entirely.
+
+**There is no Dock icon.** Click the keyboard icon in the menu bar for the menu.
+If your menu bar is too crowded to show it, double-click
+`/Applications/CapsLockControl.app` in Finder to open the window. The ⚙️ button in
+the top right of that window opens Settings.
+
+**If something goes wrong**, quitting the app restores the keyboard (⌘Q or a forced
+kill, either way). If it is still odd:
+
+```bash
+make reset-hid     # or: hidutil property --set '{"UserKeyMapping":[]}'
+```
+
+A reboot also clears it. **The keyboard can never get locked** — the worst case is
+that Caps Lock and Right Option do nothing.
+
+**GitHub sync is optional.** With a single Mac you never need to set it up.
+
+## Requirements
+
+macOS 14 or newer, Xcode 26 or newer. No third-party dependencies.
+
+## Build
+
+```
+make build            # build
+make run              # build and run (for development)
+make install          # install into /Applications and run
+make test             # unit tests
+make icon             # regenerate the icon (Tools/make-icon.swift)
+make reset-hid        # restore the keyboard after an abnormal exit
+make refresh-icon-cache
+```
+
+**Launch at login only works properly if you `make install` first.**
+`SMAppService` remembers the app's path at registration time, so registering from
+inside `build/` fails silently once the app moves. Settings warns about this.
+
+## Why it works the way it does
+
+### Why an event tap alone is not enough
+
+Caps Lock's toggle and its LED are handled **below the session event tap, in the HID
+driver**. Discarding the event in a tap still lights the LED and still flips the caps
+state. On top of that macOS applies a hold-delay to Caps Lock, which makes it
+noticeably sluggish as a layer key. That is why Karabiner ships a virtual HID driver.
+
+### The approach here: HID remap plus a thin event tap
+
+Instead of a driver, this uses `UserKeyMapping` in Apple's own `/usr/bin/hidutil`.
+
+| Physical key | After HID remap | Handled by |
+|---|---|---|
+| Caps Lock | F19 | CapsLock Control's event tap (layer A) |
+| Right Option | F20 | CapsLock Control's event tap (layer B) |
+| Right Command | F18 | macOS input-source shortcut (passed straight through) |
+| fn | Left Control | macOS (optional · `modifiers.swapFnAndLeftControl`) |
+| Left Control | fn | macOS (optional · paired with the above) |
+
+The fn swap is off by default and is turned on in Settings. It only works on Apple
+keyboards (built-in and Magic Keyboard). fn does not live on the normal keyboard
+usage page but on the Apple vendor top case page (0xFF), which hidutil also handles.
+Both directions must be mapped together — map only one and both keys become Control.
+
+The payoff is that **the event tap never touches modifiers**. No event synthesis, no
+flag juggling, no re-entrancy guards. All that is left is tracking F19/F20 and
+handling ordinary keys while a layer is held.
+
+Properties:
+
+- No private API, no kernel extension
+- Not persistent — a reboot or logout clears it
+- Restored automatically when the app exits (⌘Q and SIGTERM both)
+- Applies only to keyboards attached at the time, so it is reapplied on hotplug
+
+### Recovering after a crash
+
+If the app crashes the mapping stays behind. Caps Lock and Right Option do nothing
+(the keyboard is not locked), and this fixes it immediately:
+
+```
+make reset-hid
+# or
+hidutil property --set '{"UserKeyMapping":[]}'
+```
+
+The "Force-remove HID mapping" button in the app does the same thing. A reboot also
+clears it.
+
+## Configuration file
+
+`~/Library/Application Support/CapsLockControl/shortcuts.json`
+
+Created on first launch, **empty**. Shortcuts differ from person to person, so
+pre-filling them would only mean deleting someone else's first. Settings that alter
+the keyboard (the fn ↔ Left Control swap) also start off — a setting absent from the
+file should never quietly change your keyboard.
+
+```json
+{
+  "version": 1,
+  "defaults": {
+    "whenAlreadyActive": "hide",
+    "unmappedKeyPolicy": "swallow",
+    "capsLockTapTogglesCapsLock": true,
+    "layerTapTimeoutMilliseconds": 250
+  },
+  "rightCommand": { "action": "f18" },
+  "modifiers": { "swapFnAndLeftControl": false },
+  "layers": {
+    "capsLock": {
+      "c": { "type": "application",
+             "bundleIdentifier": "com.google.Chrome",
+             "displayName": "Google Chrome" },
+      "left": { "type": "media", "command": "previous", "target": "system" }
+    },
+    "rightOption": {}
+  }
+}
+```
+
+- Key identifiers
+  - Letters and digits: `a`–`z`, `0`–`9`
+  - Punctuation: `grave` `minus` `equal` `leftBracket` `rightBracket` `backslash`
+    `semicolon` `quote` `comma` `period` `slash`
+  - Arrows: `left` `right` `up` `down`
+  - Others: `space` `return` `tab` `delete` `escape`
+  - Punctuation also reads as the literal character (`","` `"."` `"/"` `"\\"`), but
+    the app always writes the name form. That avoids escaping backslashes in JSON,
+    and an existing alias entry is removed so one physical key never ends up with
+    two entries.
+- `whenAlreadyActive`: `nothing` | `hide` | `switchToPrevious` — overridable per key
+- `rightCommand.action`: `f18` | `none` (`none` leaves Right ⌘ alone)
+- `media.command`: `playPause` | `next` | `previous`, `target`: `system` | `spotify`
+- `modifiers.swapFnAndLeftControl`: swap fn ↔ Left Control (off when absent)
+
+**Editing it by hand is fine.** The app watches the folder and re-reads on save.
+No restart needed.
+
+Safety:
+
+- Writes are always atomic — a crash mid-write cannot leave a half file.
+- A corrupted file is **kept**, moved aside as `shortcuts.broken-<time>.json`,
+  and the app starts from defaults.
+- A file whose version is newer than the app is treated as read-only, so this Mac
+  cannot clobber a config written by a newer version on another Mac.
+- Unknown keys, layers, or action types do not crash anything. That entry is skipped
+  and reported as a warning.
+
+## Calling another app's hotkey (keyStroke)
+
+CapsLock Control presses a key combination on your behalf. Whatever app registered
+that combination as a global hotkey responds as usual.
+
+```json
+"a": {
+  "type": "keyStroke",
+  "key": "a",
+  "modifiers": ["control", "option", "shift"],
+  "label": "Toggle noise cancelling"
+}
+```
+
+**Why it is needed.** Caps Lock becomes F19 here, so another app cannot register
+"Caps+A" directly. Instead CapsLock Control catches Caps+A and emits ⌃⌥⇧+A, and the
+receiving app registers plain ⌃⌥⇧+A.
+
+**Why it works.** Hotkeys registered with Carbon's `RegisterEventHotKey` are matched
+by the WindowServer against the event stream. A synthetic event with the right
+modifier flags is treated exactly like a hardware press.
+
+**Avoiding an infinite loop.** Events we create come back into our own event tap.
+Without a marker, Caps+A → emit → tap catches it → emit again, forever. Every
+synthetic event carries a marker in `eventSourceUserData`, and the tap passes
+anything carrying it straight through.
+
+In the GUI: click an empty key, then the "Send key combination" field at the bottom
+of the picker, then press the combination. Use the **left-hand** modifiers when
+recording — Right Option belongs to this app.
+
+## Tapping Caps Lock alone
+
+Tap Caps Lock **without combining it with another key** and the original caps lock
+toggles. Hold it with a key and it is a layer; tap it alone and it is Caps Lock.
+
+Both conditions must hold:
+
+- **No other key was used** while it was held (the state machine remembers)
+- It was held for less than `layerTapTimeoutMilliseconds` (250 ms by default)
+
+The time condition exists to distinguish this from turning a layer on and then
+changing your mind.
+
+Synthesising a Caps Lock key event with CGEvent does nothing — the toggle is handled
+in the HID layer, the same reason an event tap cannot block Caps Lock. The state is
+set directly through IOKit's public API (`IOHIDSetModifierLockState`).
+
+## App toggle (when it is already frontmost)
+
+What happens when you press the same shortcut again. Same idea as Keyboard Maestro's
+Toggle.
+
+| Value | Behaviour |
+|---|---|
+| `hide` (default) | Same as ⌘H. macOS brings the next app forward on its own |
+| `switchToPrevious` | Returns to the app that was in front before this one; falls back to `hide` |
+| `nothing` | Does nothing |
+
+`hide` is the default because it holds no state. Remembering the previous app can go
+stale if that app quit or another app came in between.
+
+**Repeat suppression**: activation is asynchronous, so pressing twice very quickly
+can mean the second press sees a frontmost app that has not changed yet — making the
+toggle depend on timing. To remove that ambiguity, a repeat on the same app within
+250 ms is ignored.
+
+## Media control
+
+`target: "system"` (default) emits the same system event a hardware media key does
+(`NX_KEYTYPE_*` from IOKit's public `ev_keymap.h`). macOS delivers it to whatever is
+currently playing, so Spotify gets it when Spotify is playing. No extra permission,
+and it keeps working if you switch to Apple Music.
+
+`target: "spotify"` drives Spotify directly through AppleScript. It always controls
+Spotify regardless of what is playing, but asks for automation permission once. If
+Spotify is not running it says so rather than launching it.
+
+No private frameworks such as MediaRemote are used.
+
+## Window layout
+
+```
+┌─ [ Key Layout ] [ Status ] ─────────────────────┐  ← tabs (title bar)
+│ CapsLock Control            [Caps][R-Opt] Stop ⚙│  ← always-visible header
+│ Running · 28 shortcuts                          │     layer lights are live
+├─────────────────────────────────────────────────┤
+│ [ Caps Lock ][ Right Option ]  Used 28  Avail 28│
+│                                                 │
+│ esc `  1 2 3 4 5 6 7 8 9 0  -  =  [delete]      │
+│ [tab]  Q W E R T Y U I O P  [  ]  \             │
+│ [caps ]  A S D F G H J K L  ;  '  [return]      │
+│ [ shift ]  Z X C V B N M  ,  .  /  [ shift ]    │
+│ fn ctrl opt cmd [== space ==] cmd opt     ←↑↓→  │
+└─────────────────────────────────────────────────┘
+```
+
+- It follows the **real MacBook layout**. tab / caps / shift / return / delete sit
+  where they belong and the widths are proportional (tab 2u, shift 2.5u, space 5u…).
+  Space runs from C's left edge to M's right edge, as on a MacBook. All four arrow
+  keys are half height, with ← ↓ → along the bottom.
+- Toggle between `full keyboard` and `assignable keys only`. The first draws keys you
+  **cannot** assign (shift, option…) in grey so you can see what is remapped —
+  caps lock is highlighted when you are looking at its layer, right command shows
+  `→ F18`, fn/control show the swap. The second drops them, but the arrow keys stay
+  in their real position at the far right.
+- Both layers **share the same keyboard view**. Switching layers only changes which
+  `action` each keycap receives.
+- A keycap shows the key label, the app icon, and the app name (up to two lines).
+  Empty keys are a dashed outline with a `+`.
+- Apps that are not installed get a red border and **Missing**.
+- Permission warnings, conflict warnings, the engine switch, and the layer lights
+  live outside the tabs, so they are visible from either tab.
+
+App names on keycaps are never shortened by a heuristic. Taking the first word turns
+"Google Chrome" into "Google"; taking the last turns "Microsoft Remote Desktop Beta" into
+"Beta". Neither is right, so the full name is drawn across up to two lines and
+truncated if it still does not fit.
+
+## Editing shortcuts
+
+Click a keycap. Editing the config file by hand still works too.
+
+| Action | Result |
+|---|---|
+| **Click an empty key** | The app picker opens immediately |
+| **Click an assigned key** | Detail panel (change / remove / behaviour when frontmost) |
+| **Drag a keycap onto another** | The two **swap**. Dragging onto an empty key moves it |
+| Remove | Immediately Available |
+
+### The app picker
+
+You never type a path or a bundle ID. Search filters **as you type**, with no Enter,
+matching `localizedName` and `bundleIdentifier` case-insensitively.
+
+- **Running** — `NSWorkspace.runningApplications` filtered to
+  `activationPolicy == .regular`, so menu bar agents and background processes are
+  excluded. CapsLock Control itself is added explicitly, since assigning a shortcut
+  to it (open/hide its window) is a legitimate thing to do. The list updates as apps
+  come and go.
+- **Installed** — shown as well, because you should be able to assign an app that is
+  not running. Scanned once in the background the first time the picker opens;
+  entries already in the running list are removed.
+- **Media** — Play/Pause · Next · Previous.
+- **Hide already-assigned apps** is checked by default. Most of the time you are
+  looking for a new app, not one you already bound. It tells you how many are hidden.
+- If an app is already bound to another key in this layer, the row says so (`on C`).
+
+### Conflicts
+
+Assigning over a key already in use shows exactly what is being replaced and asks.
+
+```
+Caps + C is currently assigned to Google Chrome.
+Replace with Safari?                 [Cancel] [Replace]
+```
+
+Dragging is a **swap**, so nothing is lost and no confirmation is asked.
+
+### Development flag
+
+Opens the app picker without click automation. DEBUG builds only.
+
+```
+open build/Build/Products/Debug/CapsLockControl.app --args -openPicker q
+```
+
+## GitHub sync — Export / Import
+
+Two Macs share one configuration. Put the repository address in Settings › Sync.
+
+| Action | What it does |
+|---|---|
+| **Export** | Pushes the current configuration as a **new snapshot** stamped with the time and Mac name. Nothing existing is deleted |
+| **Import** | Pick one of the stored snapshots, see what would change, and **check off the items** you want |
+
+```
+<your-config-repo>/
+  shortcuts.json                              ← most recent export (readable on the web)
+  snapshots/
+    2026-09-14_153045_my-macbook.json
+    2026-09-13_091201_my-imac.json
+```
+
+### Why not automatic merging
+
+This started as a 3-way automatic merge and was changed.
+
+- **Export never deletes.** A bad export leaves every earlier snapshot intact, so
+  undoing is one Import. A merge overwrites the result, which is hard to recover from.
+- **Selective import is more expressive.** "Pull just Caps+C from my work Mac" cannot
+  be expressed by an automatic merge. Conversely, what the merge did — keep changes
+  from both sides — is just checking every box. It is a superset.
+- **No common ancestor to track.** A merge that picks the wrong base produces a
+  quietly wrong result. This approach has no such path.
+
+The cost is that it is not automatic, so the status line says "Changes to export".
+
+### The Import screen
+
+Picking a snapshot shows the differences against the current configuration, grouped
+into **added / changed / removed** and laid out side by side like a diff: current on
+the left, snapshot on the right, with the missing side left blank. Everything is
+checked initially, so pressing the button as-is imports all of it. There are
+`Select all` and `Deselect all` buttons.
+
+Import only changes this Mac. Nothing is pushed to GitHub.
+
+Before applying, it asks whether to back up first. "Export then import" pushes the
+current configuration as a snapshot so you can roll back with one Import. Either way
+a local backup file is always written to
+`~/Library/Application Support/CapsLockControl/backups/`.
+
+### Authentication
+
+No token, password, or SSH key is stored in the app. It reuses the SSH
+authentication already configured on the machine. To make sure it never hangs on a
+prompt it sets `GIT_TERMINAL_PROMPT=0` and `ssh -o BatchMode=yes`, and every git call
+has a timeout. If the key is not in ssh-agent it fails with "authentication failed"
+rather than hanging.
+
+> If you have more than one GitHub account, the default key may belong to the wrong
+> one. Use the `Host` alias from your `~/.ssh/config` in the address, for example
+> `git@github-personal:user/repo.git`. `ssh -T git@github.com` tells you which
+> account you authenticate as.
+
+### How the repository is handled
+
+- The clone lives in `~/Library/Application Support/CapsLockControl/sync/` and is
+  treated as a **disposable workspace**. The config folder itself is not a repository,
+  because git replacing files underneath would let the app's file watcher read a
+  half-written state.
+- Before exporting it runs `reset --hard origin/<branch>` + `clean -fd` to match the
+  remote, then commits only the new snapshot. Our commit is therefore always a
+  descendant of the remote, so a push is never rejected and no merge commit appears.
+  Leftovers from a previous failure get cleaned up at the same time.
+- A brand-new repository with no commits is handled. `rev-parse --abbrev-ref HEAD`
+  fails in that state, so the branch name comes from `symbolic-ref --short HEAD`,
+  and the reset is skipped when `origin/<branch>` does not exist.
+- Snapshots are never pruned. Each is about 4 KB, and discarding history would throw
+  away the whole point of this approach.
+
+## Project layout
+
+```
+CapsLockControl/
+  Core/     Pure logic, no AppKit. This is what the unit tests cover.
+    KeyCode.swift            virtual key code ↔ string identifier table
+    LayerKey.swift           capsLock / rightOption
+    ShortcutAction.swift     application / media / keyStroke / (room to grow)
+    BindingTable.swift       lookup table normalised to key codes
+    AppConfiguration.swift   on-disk schema + version/migration
+    ConfigStore.swift        atomic writes · corrupt-file backup · folder watching
+    ConfigDiff.swift         item-level comparison for Import
+    LayerStateMachine.swift  pure state machine for press/release ordering
+    EngineOptions.swift      engine behaviour derived from the config
+    UnmappedKeyPolicy.swift  what to do with unassigned keys (default: swallow)
+  Engine/   Where it meets the system
+    HIDRemapper.swift        hidutil wrapper + reapply on keyboard hotplug
+    EventTapController.swift CGEventTap on a dedicated thread, auto re-enable
+    KeyboardEngine.swift     wires tap ↔ state machine ↔ execution
+    ActionExecutor.swift     launch / focus / toggle (MainActor)
+    CapsLockState.swift      reads and writes the real caps lock state
+    MediaController.swift    system media keys · Spotify AppleScript
+    KeyStrokeSender.swift    synthetic events for other apps' hotkeys
+    FrontmostAppTracker.swift remembers the previous app
+    GitSync.swift            export / import through system git
+    DefaultConfiguration.swift the empty first-run configuration
+  App/      SwiftUI entry point · AppDelegate · EngineModel · SyncController
+  UI/       Keyboard editor, pickers, settings, menu bar
+```
+
+### Threading rules
+
+The event tap callback runs on a **dedicated thread, not the main thread**. If the
+main thread stalls even briefly the tap is disabled by timeout and keyboard input
+stops entirely. The callback only updates state under a lock; anything real, such as
+launching an app, is handed to `Task { @MainActor }`.
+
+### State machine invariants
+
+- A key whose keyDown was swallowed also has its keyUp swallowed — release the layer
+  first and the pairing still holds
+- Auto-repeat keyDown does not re-run the action
+- Holding two layer keys: the most recently pressed one wins
+- When the tap is re-enabled, all held-key state is forgotten
+
+## Icon
+
+`Tools/make-icon.swift` draws it in code. To change it, edit that file and run
+`make icon && make build`.
+
+The key idea is **reducing detail at small sizes**. A drawing that looks good at
+512px becomes a smudge at 16px. The first version put an SF Symbol keyboard on it and
+turned into a blur at 16–32px. Now the keyboard is drawn directly and the number of
+keys per row changes from 3 to 6 depending on size. One key in the lower left is
+blue — that is the "layer key", and at small sizes it is the only thing that reads as
+a distinguishing feature.
+
+**Note**: rebuilding to the same path leaves Finder and the app's own keycaps showing
+the old icon, because the LaunchServices icon cache keys on the path.
+`make refresh-icon-cache` clears it.
+
+## Living alongside Karabiner and Raycast
+
+While testing, do not uninstall them. Two tools grabbing the same key will collide,
+so switch Karabiner to an **empty profile** for the duration
+(Settings → Profiles → Add profile). Switching back is one click.
+
+CapsLock Control never quits another app. It only shows a warning when one is running.
+
+---
+
+# 한국어
+
+[English](#capslock-control) · **한국어**
+
+Karabiner-Elements 와 Raycast 에서 실제로 쓰던 기능만 대체하는 macOS 메뉴바
+유틸리티. Karabiner 클론도, Raycast 클론도 아니다. 외부 의존성 없이 Apple
+framework 만 쓴다.
 
 ## 핵심 특징
 
@@ -18,7 +603,7 @@ Karabiner 클론도, Raycast 클론도 아니다. 외부 의존성 없이 Apple 
 **단축키로 할 수 있는 일**
 
 - **앱 실행/전환** — 실행 중이면 앞으로, 아니면 실행.
-- **같은 키를 다시 누르면 토글** — 숨기거나 직전 앱으로 돌아간다. 키마다 따로 정할 수 있다.
+- **같은 키를 다시 누르면 토글** — 숨기거나 직전 앱으로 돌아간다. 키마다 따로 정한다.
 - **미디어 제어** — 재생/일시정지·다음·이전. 지금 재생 중인 앱이 받는다.
 - **다른 앱의 전역 단축키 호출** — `⌃⌥⇧A` 같은 조합을 대신 눌러 준다.
   Caps Lock 은 모디파이어가 아니라서 다른 앱이 직접 등록할 수 없는데, 이걸로 우회한다.
@@ -43,7 +628,7 @@ Karabiner 클론도, Raycast 클론도 아니다. 외부 의존성 없이 Apple 
 
 **동작 방식**
 
-- Dock 아이콘 없는 **메뉴바 전용 앱**. 로그인 시 자동 실행(SMAppService).
+- Dock 아이콘 없는 **메뉴바 전용 앱**. 로그인 시 자동 실행(`SMAppService`).
 - 가상 HID 드라이버를 만들지 않는다. Apple 이 제공하는 `hidutil` 리맵 +
   얇은 `CGEventTap` 조합이다.
 - **앱을 종료하면 키보드가 원래대로 돌아간다.** ⌘Q 든 강제 종료(SIGTERM)든.
@@ -120,7 +705,7 @@ Right Command 는 설정에서 끌 수 있지만 앞의 둘은 레이어 키라 
 make reset-hid     # 또는 hidutil property --set '{"UserKeyMapping":[]}'
 ```
 
-재부팅해도 원래대로 돌아온다. 키보드가 잠기는 일은 없다 —
+재부팅해도 원래대로 돌아온다. **키보드가 잠기는 일은 없다** —
 최악의 경우 Caps Lock 과 Right Option 이 아무 일도 안 하는 상태가 될 뿐이다.
 
 **GitHub 동기화는 선택 사항이다.** Mac 이 하나면 설정하지 않아도 된다.
@@ -132,74 +717,44 @@ macOS 14 이상, Xcode 26 이상. 외부 의존성 없음.
 ## 빌드
 
 ```
-make build     # 빌드
-make run       # 빌드 후 실행 (개발용)
-make install   # /Applications 로 설치하고 실행
-make test      # 유닛 테스트
-make icon      # 아이콘 다시 생성 (Tools/make-icon.swift)
-make reset-hid # 비정상 종료 후 키보드 복구
+make build            # 빌드
+make run              # 빌드 후 실행 (개발용)
+make install          # /Applications 로 설치하고 실행
+make test             # 유닛 테스트
+make icon             # 아이콘 다시 생성 (Tools/make-icon.swift)
+make reset-hid        # 비정상 종료 후 키보드 복구
+make refresh-icon-cache
 ```
 
 **로그인 시 자동 실행을 쓰려면 `make install` 로 설치한 뒤 켜야 한다.**
 `SMAppService` 는 등록 시점의 앱 경로를 기억하므로, `build/` 안에서 등록하면
 앱을 옮기는 순간 조용히 실패한다. 설정 창에 이 경고가 뜬다.
 
-## 메뉴바 앱
-
-Dock 아이콘이 없는 메뉴바 전용 앱(`LSUIElement`)이다. 메뉴바 아이콘은 상태를
-나타낸다 — 권한 없음 / 정지 / 동작 중.
-
-```
-동작 중 · 단축키 28개
-────────────────────────────
-✓ Enabled
-────────────────────────────
-Open Key Layout...
-내보낼 변경 있음
-Export to GitHub
-Import from GitHub...
-Settings...                ⌘,
-────────────────────────────
-Quit CapsLock Control      ⌘Q
-```
-
-평소엔 창을 띄우지 않는다. 다만 **첫 실행**이거나 **손쉬운 사용 권한이 없을 때**는
-창을 띄워야 무엇을 해야 할지 알 수 있으므로 자동으로 연다.
-
-`LSUIElement` 앱에서는 SwiftUI 가 `Window` 씬을 자동으로 만들지 않는다. 그래서
-창을 여는 `openWindow` 액션을 메뉴바 라벨이 뜰 때 `WindowOpener` 에 등록해 두고
-AppKit 쪽에서도 꺼내 쓴다. `Settings` 씬도 메뉴바 전용 앱에서 열기가 불안정해서
-평범한 `Window` 로 만들었다.
-
-**단축키로 CapsLock Control 자신을 여는 경우**는 `applicationShouldHandleReopen` 에서
-처리한다. 메뉴바 앱은 "앱을 앞으로 가져오기" 와 "창을 띄우기" 가 분리돼 있어서,
-이 훅이 없으면 단축키를 눌러도 아무 일도 일어나지 않는다.
-
-## 동작 원리
+## 왜 이렇게 만들었나
 
 ### 왜 event tap 만으로는 안 되는가
 
-Caps Lock 의 토글과 LED 는 세션 event tap 보다 **아래 계층(HID 드라이버)** 에서 처리된다.
-event tap 에서 이벤트를 버려도 LED 는 켜지고 caps 상태는 바뀐다. 게다가 macOS 는
-Caps Lock 에 hold-delay 를 걸기 때문에 레이어 키로 쓰면 반응이 눈에 띄게 느리다.
-Karabiner 가 가상 HID 드라이버를 만드는 이유가 이것이다.
+Caps Lock 의 토글과 LED 는 세션 event tap 보다 **아래 계층(HID 드라이버)** 에서
+처리된다. event tap 에서 이벤트를 버려도 LED 는 켜지고 caps 상태는 바뀐다. 게다가
+macOS 는 Caps Lock 에 hold-delay 를 걸기 때문에 레이어 키로 쓰면 반응이 눈에 띄게
+느리다. Karabiner 가 가상 HID 드라이버를 만드는 이유가 이것이다.
 
-### CapsLock Control 의 방식: HID 리맵 + 얇은 event tap
+### 이 앱의 방식: HID 리맵 + 얇은 event tap
 
 드라이버를 만드는 대신 Apple 이 제공하는 `/usr/bin/hidutil` 의 `UserKeyMapping` 을 쓴다.
 
 | 물리 키 | HID 리맵 후 | 처리 주체 |
 |---|---|---|
-| Caps Lock | F19 | CapsLockControl event tap (레이어 A) |
-| Right Option | F20 | CapsLockControl event tap (레이어 B) |
-| Right Command | F18 | macOS 입력 소스 단축키 (CapsLock Control 은 손대지 않고 통과시킨다) |
+| Caps Lock | F19 | 이 앱의 event tap (레이어 A) |
+| Right Option | F20 | 이 앱의 event tap (레이어 B) |
+| Right Command | F18 | macOS 입력 소스 단축키 (손대지 않고 통과) |
 | fn | Left Control | macOS (선택 · `modifiers.swapFnAndLeftControl`) |
 | Left Control | fn | macOS (선택 · 위와 한 쌍) |
 
-fn 스왑은 기본적으로 꺼져 있고 Status 탭에서 켠다. Apple 키보드(내장·Magic
-Keyboard)에서만 동작한다. fn 은 일반 키보드 usage page 가 아니라 Apple vendor
-top case page(0xFF) 에 있는데, hidutil 이 그 페이지도 다룬다. 양방향 두 줄을
-함께 걸어야 한다. 한쪽만 걸면 두 키가 모두 Control 이 된다.
+fn 스왑은 기본적으로 꺼져 있고 설정 창에서 켠다. Apple 키보드(내장·Magic Keyboard)
+에서만 동작한다. fn 은 일반 키보드 usage page 가 아니라 Apple vendor top case
+page(0xFF) 에 있는데, hidutil 이 그 페이지도 다룬다. 양방향 두 줄을 함께 걸어야
+한다. 한쪽만 걸면 두 키가 모두 Control 이 된다.
 
 이렇게 하면 event tap 이 **모디파이어를 전혀 다루지 않는다.** 이벤트 합성도, 플래그
 조작도, 재진입 방지도 필요 없다. 남는 일은 "F19/F20 눌림 추적"과 "레이어가 켜져
@@ -229,9 +784,10 @@ hidutil property --set '{"UserKeyMapping":[]}'
 
 `~/Library/Application Support/CapsLockControl/shortcuts.json`
 
-처음 실행할 때 자동으로 만들어진다. 번들 ID 를 소스에 못 박지 않고, 앱 이름으로
-이 Mac 에 실제로 설치된 앱을 찾아 그 번들 ID 를 쓴다. 집 Mac 과 회사 Mac 에
-설치된 앱이 달라도 각자 맞는 값으로 생성된다.
+처음 실행할 때 **비어 있는 상태로** 만들어진다. 단축키는 사람마다 쓰는 앱이 달라서
+미리 채워 두면 대부분 지우는 일부터 해야 한다. 키보드를 바꾸는 설정
+(fn ↔ 왼쪽 Control 스왑)도 꺼진 채로 시작한다. 설정 파일에 없는 항목이 조용히
+키보드를 바꿔 버리면 안 된다.
 
 ```json
 {
@@ -243,7 +799,7 @@ hidutil property --set '{"UserKeyMapping":[]}'
     "layerTapTimeoutMilliseconds": 250
   },
   "rightCommand": { "action": "f18" },
-  "modifiers": { "swapFnAndLeftControl": true },
+  "modifiers": { "swapFnAndLeftControl": false },
   "layers": {
     "capsLock": {
       "c": { "type": "application",
@@ -285,7 +841,7 @@ hidutil property --set '{"UserKeyMapping":[]}'
 
 ## 다른 앱의 단축키 부르기 (keyStroke)
 
-CapsLock Control 이 키 조합을 대신 눌러 주는 동작이다. 그 조합을 전역 단축키로 등록해 둔
+이 앱이 키 조합을 대신 눌러 주는 동작이다. 그 조합을 전역 단축키로 등록해 둔
 앱이 평소처럼 반응한다.
 
 ```json
@@ -293,14 +849,13 @@ CapsLock Control 이 키 조합을 대신 눌러 주는 동작이다. 그 조합
   "type": "keyStroke",
   "key": "a",
   "modifiers": ["control", "option", "shift"],
-  "label": "NoCan 토글"
+  "label": "노이즈 캔슬링 토글"
 }
 ```
 
 **왜 필요한가.** Caps Lock 은 이 앱에서 F19 로 바뀌기 때문에 다른 앱이 "Caps+A" 를
-직접 등록할 수 없다. 그래서 Caps+A 를 CapsLock Control 이 받아서 ⌃⌥⇧+A 를 발생시키고,
-받는 앱은 원래대로 ⌃⌥⇧+A 를 등록해 둔다. Karabiner 로 Right Option 을 Meh(⌃⌥⇧)
-로 쓰던 구조를 그대로 유지하는 셈이다.
+직접 등록할 수 없다. 그래서 Caps+A 를 이 앱이 받아서 ⌃⌥⇧+A 를 발생시키고,
+받는 앱은 원래대로 ⌃⌥⇧+A 를 등록해 둔다.
 
 **왜 통하는가.** `RegisterEventHotKey`(Carbon) 로 등록된 단축키는 WindowServer 가
 이벤트 스트림을 보고 판정한다. 우리가 만든 이벤트도 수정자 플래그가 맞으면
@@ -362,70 +917,21 @@ Apple Music 으로 갈아타도 그대로 동작한다.
 
 MediaRemote 같은 private framework 는 쓰지 않는다.
 
-## 구조
-
-```
-CapsLockControl/
-  Core/     AppKit 의존 없는 순수 로직. 유닛 테스트 대상.
-    KeyCode.swift            가상 키코드 ↔ 문자열 식별자 표 (설정/UI 공용)
-    LayerKey.swift           capsLock / rightOption
-    ShortcutAction.swift     application / media / (확장 자리)
-    BindingTable.swift       키코드로 정규화된 조회 표
-    CapsLockControlConfig.swift     디스크 스키마 + version/migration
-    ConfigStore.swift        atomic 저장 · 손상 파일 백업 · 폴더 감시
-    LayerStateMachine.swift  눌림·뗌 순서를 다루는 순수 상태 기계
-    UnmappedKeyPolicy.swift  등록되지 않은 키 정책 (기본: 삼킴)
-  Engine/   시스템과 맞닿는 부분
-    HIDRemapper.swift        hidutil 래핑 + 키보드 핫플러그 재적용
-    EventTapController.swift 전용 스레드 위의 CGEventTap, 꺼지면 자동 재활성화
-    KeyboardEngine.swift     탭 ↔ 상태 기계 ↔ 실행 연결
-    ActionExecutor.swift     앱 실행/활성화/토글 (MainActor)
-    MediaController.swift    시스템 미디어 키 · Spotify AppleScript
-    KeyStrokeSender.swift    다른 앱의 전역 단축키를 부르는 합성 이벤트
-    FrontmostAppTracker.swift 직전 앱 기록 (switchToPrevious 전용)
-    DefaultConfiguration.swift 첫 실행 시 기본 설정 생성
-  App/      SwiftUI 진입점 · AppDelegate · EngineModel
-  UI/
-    MainWindowView.swift     헤더 + 배너 + 탭
-    KeyboardEditorView.swift QWERTY 배열, 레이어 전환, Used/Available
-    KeyboardLayout.swift     물리 배치(어느 자리에 얼마나 넓게)
-    KeycapView.swift         키 한 칸 (두 레이어 공용) + 쓸 수 없는 키
-    KeyDetailView.swift      선택한 키 상세 + 편집 버튼
-    ApplicationPickerView.swift 앱 검색 팝오버
-    ApplicationCatalog.swift 실행 중 / 설치된 앱 목록과 검색
-    KeyStrokeRecorder.swift  보낼 조합을 눌러서 지정하는 칸 (NSView)
-    StatusView.swift         HID 매핑 · 설정 파일 · 로그
-    AppIconProvider.swift    앱 아이콘 캐시
-```
-
-### 스레드 규칙
-
-이벤트 탭 콜백은 **메인 스레드가 아닌 전용 스레드**에서 돈다. 메인 스레드가 잠깐이라도
-막히면 탭이 타임아웃으로 꺼지면서 키보드 입력이 통째로 먹통이 되기 때문이다.
-콜백 안에서는 락 아래 상태 갱신만 하고, 앱 실행 같은 일은 `Task { @MainActor }` 로 넘긴다.
-
-### 상태 기계 불변식
-
-- 삼켜서 keyDown 을 없앤 키는 keyUp 도 반드시 삼킨다 (레이어를 먼저 떼도 짝이 맞는다)
-- 오토리핏 keyDown 은 동작을 다시 실행하지 않는다
-- 레이어 키를 겹쳐 누르면 마지막에 누른 쪽이 이긴다
-- 탭이 재활성화되면 눌림 상태를 전부 잊는다
-
 ## 창 구성
 
 ```
-┌─ [ Key Layout ] [ Status ] ──────────────────┐  ← 탭 (타이틀바)
-│ CapsLockControl                    [Caps][R-Opt] 정지 │  ← 항상 보이는 헤더
-│ 동작 중 · 단축키 24개                          │     레이어 표시등은 실시간
-├───────────────────────────────────────────────┤
-│ [ Caps Lock ][ Right Option ]  Used 24  Avail 16│
-│                                               │
-│ esc `  1 2 3 4 5 6 7 8 9 0  -  =  [delete]    │
-│ [tab]  Q W E R T Y U I O P  [  ]  \           │
-│ [caps ]  A S D F G H J K L  ;  '  [return]    │
-│ [ shift ]  Z X C V B N M  ,  .  /  [ shift ]  │
-│ fn ctrl opt cmd [== space ==] cmd opt   ←↑↓→  │
-└───────────────────────────────────────────────┘
+┌─ [ Key Layout ] [ Status ] ─────────────────────┐  ← 탭 (타이틀바)
+│ CapsLock Control            [Caps][R-Opt] 정지 ⚙│  ← 항상 보이는 헤더
+│ 동작 중 · 단축키 28개                            │     레이어 표시등은 실시간
+├─────────────────────────────────────────────────┤
+│ [ Caps Lock ][ Right Option ]  Used 28  Avail 28│
+│                                                 │
+│ esc `  1 2 3 4 5 6 7 8 9 0  -  =  [delete]      │
+│ [tab]  Q W E R T Y U I O P  [  ]  \             │
+│ [caps ]  A S D F G H J K L  ;  '  [return]      │
+│ [ shift ]  Z X C V B N M  ,  .  /  [ shift ]    │
+│ fn ctrl opt cmd [== space ==] cmd opt     ←↑↓→  │
+└─────────────────────────────────────────────────┘
 ```
 
 - **실제 맥북 배치**를 따른다. tab / caps / shift / return / delete 가 제자리에 있고
@@ -435,12 +941,12 @@ CapsLockControl/
 - `전체 키보드` / `단축키 키만` 을 전환할 수 있다. 앞쪽은 shift·option 처럼
   **단축키로 쓸 수 없는 키까지 회색으로** 그려서 무엇이 리맵돼 있는지 보여 준다
   (caps lock 은 지금 보고 있는 레이어면 강조되고, 오른쪽 command 는 `→ F18`,
-  fn/control 은 스왑 상태를 표시한다). 뒤쪽은 걸 수 있는 키만 남긴다.
-  모디파이어를 지워도 방향키는 원래 자리(오른쪽 끝)에 남는다.
+  fn/control 은 스왑 상태를 표시한다). 뒤쪽은 걸 수 있는 키만 남기되
+  방향키는 원래 자리(오른쪽 끝)에 남는다.
 - 두 레이어가 **같은 키보드 뷰를 공유**한다. 레이어를 바꾸면 키캡에 넘기는
   `action` 만 달라진다.
 - 키캡에는 키 문자 · 앱 아이콘 · 앱 이름(두 줄까지)이 들어간다.
-  빈 키는 점선 테두리 + `+` + `Available`.
+  빈 키는 점선 테두리 + `+`.
 - 설치되지 않은 앱은 빨간 테두리와 **Missing** 으로 표시된다.
 - 권한 경고 · 충돌 경고 · 엔진 시작/정지 · 레이어 표시등은 탭 밖에 있어서
   어느 탭에 있어도 보인다.
@@ -468,10 +974,14 @@ CapsLockControl/
 `bundleIdentifier` 를 대소문자 구분 없이 부분 일치로 본다.
 
 - **실행 중** — `NSWorkspace.runningApplications` 중 `activationPolicy == .regular`
-  인 것만. 메뉴바 전용 앱과 백그라운드 프로세스는 뺀다. 앱을 켜고 끄면 목록도 따라 바뀐다.
+  인 것만. 메뉴바 전용 앱과 백그라운드 프로세스는 뺀다. 다만 **이 앱 자신은 따로
+  넣어 준다** — 자기 창을 열고 닫는 단축키를 거는 건 정상적인 용도라서다.
+  앱을 켜고 끄면 목록도 따라 바뀐다.
 - **설치됨** — 실행 중이 아닌 앱에도 단축키를 걸 수 있어야 하므로 함께 보여 준다.
   처음 피커를 열 때 한 번만 훑고(백그라운드), 실행 중 목록과 겹치는 것은 뺀다.
 - **미디어** — Play/Pause · Next · Previous.
+- **이미 할당된 앱 숨기기** 는 기본으로 켜져 있다. 대부분은 새 앱을 찾으러 오지,
+  이미 건 앱을 다시 찾으러 오지 않는다. 몇 개가 숨겨졌는지도 보여 준다.
 - 고르려는 앱이 같은 레이어의 다른 키에 이미 걸려 있으면 `이미 C` 처럼 알려 준다.
 
 ### 충돌
@@ -487,7 +997,7 @@ Safari 으로 교체할까요?              [취소] [교체]
 
 ### 개발용 플래그
 
-클릭 자동화 없이 앱 피커 팝오버 모양을 확인할 때 쓴다. DEBUG 빌드만.
+클릭 자동화 없이 앱 피커 모양을 확인할 때 쓴다. DEBUG 빌드만.
 
 ```
 open build/Build/Products/Debug/CapsLockControl.app --args -openPicker q
@@ -503,10 +1013,10 @@ open build/Build/Products/Debug/CapsLockControl.app --args -openPicker q
 | **Import** | 쌓인 스냅샷 중 하나를 고르고, 무엇이 달라지는지 본 뒤 **항목을 체크해서** 가져온다 |
 
 ```
-keylayer-config/
+<내 설정 저장소>/
   shortcuts.json                              ← 가장 최근 export (GitHub 웹에서 읽기용)
   snapshots/
-    2026-09-14_153045_my-mbp.json
+    2026-09-14_153045_my-macbook.json
     2026-09-13_091201_my-imac.json
 ```
 
@@ -526,11 +1036,16 @@ keylayer-config/
 
 ### Import 화면
 
-스냅샷을 고르면 지금 설정과의 차이가 항목별로 뜬다. 각 줄에 `추가` / `변경` / `삭제`
-표시와 `현재 값 → 스냅샷 값` 이 보인다. 처음엔 전부 체크돼 있어서 그대로 누르면
-전체 가져오기가 된다. `전체 선택` · `전체 해제` 버튼도 있다.
+스냅샷을 고르면 지금 설정과의 차이가 **새로 생김 / 바뀜 / 사라짐** 으로 묶여서,
+git diff 처럼 **좌우로** 뜬다. 왼쪽이 지금 설정, 오른쪽이 스냅샷이고 한쪽에만 있는
+항목은 그쪽 칸에만 그린다. 처음엔 전부 체크돼 있어서 그대로 누르면 전체 가져오기가
+된다. `전체 선택` · `전체 해제` 버튼도 있다.
 
 Import 는 이 Mac 의 설정만 바꾼다. GitHub 에는 아무것도 올리지 않는다.
+
+적용 전에 백업할지 묻는다. "Export 하고 가져오기" 는 지금 설정을 스냅샷으로 먼저
+올려서 Import 한 번으로 되돌릴 수 있게 해 준다. 어느 쪽을 고르든 로컬 백업 파일이
+`~/Library/Application Support/CapsLockControl/backups/` 에 항상 남는다.
 
 ### 인증
 
@@ -538,6 +1053,10 @@ Import 는 이 Mac 의 설정만 바꾼다. GitHub 에는 아무것도 올리지
 그대로 쓴다. 프롬프트로 멈추지 않도록 `GIT_TERMINAL_PROMPT=0` 과
 `ssh -o BatchMode=yes` 를 걸고, 모든 git 호출에 타임아웃을 둔다. SSH 키가
 ssh-agent 에 없으면 멈추지 않고 "인증 실패" 로 끝난다.
+
+> GitHub 계정이 여러 개면 기본 키가 다른 계정일 수 있다. `~/.ssh/config` 의
+> `Host` 별칭을 주소에 쓰자. 예: `git@github-personal:사용자/저장소.git`.
+> 어느 계정으로 인증되는지는 `ssh -T git@github.com` 으로 확인한다.
 
 ### 저장소를 다루는 방식
 
@@ -552,6 +1071,49 @@ ssh-agent 에 없으면 멈추지 않고 "인증 실패" 로 끝난다.
   `origin/<branch>` 가 없으면 reset 을 건너뛴다.
 - 스냅샷은 자동으로 지우지 않는다. 하나에 4KB 남짓이라 쌓여도 문제가 되지 않고,
   이력을 지우는 것이야말로 이 방식의 장점을 없애는 일이다.
+
+## 구조
+
+```
+CapsLockControl/
+  Core/     AppKit 의존 없는 순수 로직. 유닛 테스트 대상.
+    KeyCode.swift            가상 키코드 ↔ 문자열 식별자 표
+    LayerKey.swift           capsLock / rightOption
+    ShortcutAction.swift     application / media / keyStroke / (확장 자리)
+    BindingTable.swift       키코드로 정규화된 조회 표
+    AppConfiguration.swift   디스크 스키마 + version/migration
+    ConfigStore.swift        atomic 저장 · 손상 파일 백업 · 폴더 감시
+    ConfigDiff.swift         Import 용 항목 단위 비교
+    LayerStateMachine.swift  눌림·뗌 순서를 다루는 순수 상태 기계
+    EngineOptions.swift      설정에서 뽑아낸 엔진 동작 방식
+    UnmappedKeyPolicy.swift  등록되지 않은 키 정책 (기본: 삼킴)
+  Engine/   시스템과 맞닿는 부분
+    HIDRemapper.swift        hidutil 래핑 + 키보드 핫플러그 재적용
+    EventTapController.swift 전용 스레드 위의 CGEventTap, 꺼지면 자동 재활성화
+    KeyboardEngine.swift     탭 ↔ 상태 기계 ↔ 실행 연결
+    ActionExecutor.swift     앱 실행/활성화/토글 (MainActor)
+    CapsLockState.swift      진짜 Caps Lock 상태를 읽고 쓴다
+    MediaController.swift    시스템 미디어 키 · Spotify AppleScript
+    KeyStrokeSender.swift    다른 앱의 전역 단축키를 부르는 합성 이벤트
+    FrontmostAppTracker.swift 직전 앱 기록
+    GitSync.swift            시스템 git 으로 export / import
+    DefaultConfiguration.swift 첫 실행 시의 빈 설정
+  App/      SwiftUI 진입점 · AppDelegate · EngineModel · SyncController
+  UI/       키보드 에디터, 피커, 설정, 메뉴바
+```
+
+### 스레드 규칙
+
+이벤트 탭 콜백은 **메인 스레드가 아닌 전용 스레드**에서 돈다. 메인 스레드가 잠깐이라도
+막히면 탭이 타임아웃으로 꺼지면서 키보드 입력이 통째로 먹통이 되기 때문이다.
+콜백 안에서는 락 아래 상태 갱신만 하고, 앱 실행 같은 일은 `Task { @MainActor }` 로 넘긴다.
+
+### 상태 기계 불변식
+
+- 삼켜서 keyDown 을 없앤 키는 keyUp 도 반드시 삼킨다 (레이어를 먼저 떼도 짝이 맞는다)
+- 오토리핏 keyDown 은 동작을 다시 실행하지 않는다
+- 레이어 키를 겹쳐 누르면 마지막에 누른 쪽이 이긴다
+- 탭이 재활성화되면 눌림 상태를 전부 잊는다
 
 ## 아이콘
 
@@ -570,8 +1132,8 @@ ssh-agent 에 없으면 멈추지 않고 "인증 실패" 로 끝난다.
 
 ## 기존 도구와의 공존
 
-개발/검증 중에는 Karabiner 와 Raycast 를 지우지 않는다. 다만 같은 키를 두 도구가
+검증하는 동안에는 Karabiner 와 Raycast 를 지우지 않는다. 다만 같은 키를 두 도구가
 동시에 가로채면 겹치므로, 테스트할 때는 Karabiner 에 **빈 프로필**을 만들어 잠시
 전환한다 (Settings → Profiles → Add profile). 되돌리기가 한 번의 클릭이다.
 
-CapsLock Control 은 다른 앱을 절대 자동 종료하지 않는다. 실행 중이면 창에 경고만 띄운다.
+이 앱은 다른 앱을 절대 자동 종료하지 않는다. 실행 중이면 창에 경고만 띄운다.
