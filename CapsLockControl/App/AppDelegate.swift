@@ -74,6 +74,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+        // 백그라운드 데몬은 앱 실행 알림을 주지 않는다. 사용자가 "왜 안 되지" 하고
+        // 앱을 열어 보는 순간이 가장 확실한 갱신 시점이다.
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.model.refreshConflictingApps()
+            }
+        }
     }
 
     // MARK: - 강제 종료 대비

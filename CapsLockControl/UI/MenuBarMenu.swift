@@ -20,6 +20,10 @@ struct MenuBarMenu: View {
 
         Divider()
 
+        if model.conflictingApps.contains(where: \.isIntercepting) {
+            Button("충돌 해결 방법 보기...") { WindowOpener.shared.openKeyLayout() }
+        }
+
         Button("Open Key Layout...") { WindowOpener.shared.openKeyLayout() }
 
         Text(model.sync.statusLine(for: model.config))
@@ -39,6 +43,11 @@ struct MenuBarMenu: View {
     private var statusLine: String {
         guard model.isTrusted else { return "권한 필요" }
         guard model.isEngineRunning else { return "정지됨" }
+        // 엔진이 멀쩡히 돌아도 다른 도구가 키를 먼저 채가면 아무것도 안 먹는다.
+        // "동작 중" 만 보여 주면 사용자는 원인을 찾을 길이 없다.
+        if let blocker = model.conflictingApps.first(where: \.isIntercepting) {
+            return "⚠︎ \(blocker.name) 충돌 · 단축키가 안 먹을 수 있음"
+        }
         return "동작 중 · 단축키 \(model.bindingCount)개"
     }
 

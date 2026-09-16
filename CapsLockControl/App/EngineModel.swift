@@ -21,7 +21,7 @@ final class EngineModel {
     private(set) var isHIDMappingApplied = false
     private(set) var hidMappings: [HIDRemapper.Mapping] = []
     private(set) var isTrusted = AccessibilityPermission.isTrusted
-    private(set) var conflictingApps: [String] = []
+    private(set) var conflictingApps: [KeyboardToolConflict] = []
     private(set) var lastError: String?
 
     private(set) var config: CapsLockControlConfig
@@ -268,6 +268,11 @@ final class EngineModel {
             try engine.start()
             lastError = nil
             appendLog("엔진을 시작했습니다 (단축키 \(engine.bindingCount)개).")
+            // 데몬은 앱 실행 알림을 주지 않는다. 켜는 시점에 한 번 더 본다.
+            refreshConflictingApps()
+            for tool in conflictingApps where tool.isIntercepting {
+                appendLog("⚠︎ \(tool.name) 이(가) 켜져 있습니다. 이 앱의 단축키가 안 먹을 수 있습니다.")
+            }
         } catch {
             lastError = error.localizedDescription
             appendLog("⚠︎ 엔진 시작 실패: \(error.localizedDescription)")
@@ -336,33 +341,31 @@ final class EngineModel {
         }
     }
 
+    /// 같은 키를 가로채는 다른 도구가 도는지 본다. **죽이지 않는다. 알려만 준다.**
+    ///
+    /// 예전에는 실행 중인 GUI 앱의 번들 ID 두 개와 `pgrep -f karabiner_grabber` 만 봤다.
+    /// Karabiner 는 구성요소가 여럿이고 버전마다 프로세스 이름이 달라서 그걸로는 샌다.
+    /// 그래서 전체 프로세스 목록을 훑는다.
     func refreshConflictingApps() {
-        // 죽이지 않는다. 알려만 준다.
-        let watched: [(String, String)] = [
-            ("org.pqrs.Karabiner-Elements.Settings", "Karabiner-Elements"),
-            ("org.pqrs.Karabiner-EventViewer", "Karabiner-EventViewer"),
-        ]
-        let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
-        var names = watched.filter { running.contains($0.0) }.map(\.1)
-        // Karabiner 는 GUI 를 닫아도 백그라운드 데몬이 남아 있으면 계속 개입한다.
-        if !names.contains("Karabiner-Elements"), isKarabinerDaemonRunning() {
-            names.append("Karabiner (백그라운드 데몬)")
-        }
-        conflictingApps = names
+        conflictingApps = KeyboardToolDetector.tools(in: Self.runningProcessList())
     }
 
-    private func isKarabinerDaemonRunning() -> Bool {
+    /// `ps` 로 전체 프로세스의 실행 파일 경로를 받는다. 실패하면 빈 문자열.
+    private static func runningProcessList() -> String {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
-        process.arguments = ["-f", "karabiner_grabber"]
-        process.standardOutput = FileHandle.nullDevice
+        process.executableURL = URL(fileURLWithPath: "/bin/ps")
+        // comm= 은 헤더 없이 실행 파일 경로만 낸다. root 로 도는 데몬도 보인다.
+        process.arguments = ["-Ao", "comm="]
+        let pipe = Pipe()
+        process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
         do {
             try process.run()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
-            return process.terminationStatus == 0
+            return String(decoding: data, as: UTF8.self).lowercased()
         } catch {
-            return false
+            return ""
         }
     }
 

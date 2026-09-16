@@ -141,17 +141,51 @@ struct MainWindowView: View {
         "tccutil reset Accessibility dev.itaehyeok.CapsLockControl"
 
 
+    /// 지금 키를 가로채는 도구가 있으면 노란 경고, 흔적만 남았으면 회색 안내.
+    /// 둘을 같은 색으로 띄우면 진짜 경고가 묻힌다.
+    @ViewBuilder
     private var conflictBanner: some View {
-        banner(tint: .yellow, icon: "bolt.trianglebadge.exclamationmark.fill") {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("다른 키보드 도구가 실행 중입니다: \(model.conflictingApps.joined(separator: ", "))")
-                    .font(.callout).bold()
-                Text("같은 키를 두 도구가 가로채면 동작이 겹칩니다. 직접 종료해 주세요. "
-                     + "CapsLock Control 은 다른 앱을 종료하지 않습니다.")
-                    .font(.caption)
-                Button("다시 확인") { model.refreshConflictingApps() }
-                    .controlSize(.small)
+        let intercepting = model.conflictingApps.filter(\.isIntercepting)
+        if intercepting.isEmpty {
+            banner(tint: .secondary, icon: "info.circle.fill") {
+                conflictBody(model.conflictingApps,
+                             title: "예전 키보드 도구의 흔적이 남아 있습니다",
+                             bold: false)
             }
+        } else {
+            banner(tint: .yellow, icon: "bolt.trianglebadge.exclamationmark.fill") {
+                conflictBody(intercepting,
+                             title: "다른 키보드 도구가 키를 가로채고 있습니다: "
+                                  + intercepting.map(\.name).joined(separator: ", "),
+                             bold: true)
+            }
+        }
+    }
+
+    private func conflictBody(
+        _ tools: [KeyboardToolConflict],
+        title: String,
+        bold: Bool
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.callout)
+                .fontWeight(bold ? .bold : .regular)
+                .fixedSize(horizontal: false, vertical: true)
+            if bold {
+                Text("이 앱의 단축키가 아예 동작하지 않을 수 있습니다. "
+                     + "CapsLock Control 은 다른 앱을 종료하지 않으니 직접 정리해 주세요.")
+                    .font(.caption)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(tools) { tool in
+                Text("• \(tool.name) — \(tool.hint)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Button("다시 확인") { model.refreshConflictingApps() }
+                .controlSize(.small)
         }
     }
 

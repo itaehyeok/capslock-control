@@ -108,6 +108,15 @@ switch to an **empty profile**.
 Switching back is one click. CapsLock Control never quits another app on its own;
 it only shows a warning.
 
+**Closing the Karabiner window is not enough.** Its background daemon keeps
+grabbing the keyboard, and the symptom is total silence: the engine reports
+`Running · N shortcuts`, but Caps Lock produces no reaction and the `Caps`
+indicator never lights. CapsLock Control watches for this and shows
+`⚠︎ Karabiner-Elements conflict` in the menu bar status line.
+
+A leftover DriverKit extension with no daemon running is harmless — the app
+reports that one as a grey note, not a warning.
+
 ### 4. Create shortcuts
 
 **You start with an empty layout.** Click any blank key in the keyboard picture and
@@ -696,6 +705,14 @@ tccutil reset Accessibility dev.itaehyeok.CapsLockControl
 
 되돌리는 것도 클릭 한 번이다. CapsLock Control 은 다른 앱을 절대 자동 종료하지 않고
 경고만 띄운다.
+
+**창을 닫는 것으로는 부족하다.** 백그라운드 데몬이 계속 키보드를 잡고 있고,
+증상은 완전한 침묵이다 — 앱은 `동작 중 · 단축키 N개` 라고 멀줦히 표시하는데
+Caps Lock 을 눌러도 아무 반응이 없고 `Caps` 표시등도 안 들어온다. 이제는 이 경우를
+감지해서 메뉴바 상태줄에 `⚠︎ Karabiner-Elements 충돌` 로 띄운다.
+
+데몬 없이 DriverKit 드라이버 확장만 남은 상태는 무해하다 — 그건 경고가 아니라
+회색 안내로만 보여 준다.
 
 ### 4. 단축키 만들기
 
