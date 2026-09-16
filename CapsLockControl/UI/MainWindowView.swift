@@ -10,6 +10,7 @@ struct MainWindowView: View {
     }
 
     @State private var tab: Tab = .keyLayout
+    @State private var isShowingStaleGrantHelp = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -91,12 +92,54 @@ struct MainWindowView: View {
                 Text("시스템 설정 › 개인정보 보호 및 보안 › 손쉬운 사용 에서 CapsLock Control 을 켜 주세요. "
                      + "허용하면 자동으로 시작합니다.")
                     .font(.caption)
-                Button("시스템 설정 열기") { model.requestAccessibilityPermission() }
-                    .buttonStyle(.borderedProminent)
+                HStack(spacing: 8) {
+                    Button("시스템 설정 열기") { model.requestAccessibilityPermission() }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    Button(isShowingStaleGrantHelp ? "접기" : "이미 켰는데도 안 될 때") {
+                        isShowingStaleGrantHelp.toggle()
+                    }
                     .controlSize(.small)
+                }
+                if isShowingStaleGrantHelp { staleGrantHelp }
             }
         }
     }
+
+    /// 앱을 다시 빌드하면 서명이 바뀌어서(ad-hoc 인 경우) 예전 권한 기록이 남는다.
+    /// 목록에는 켜져 있는데 실제로는 안 먹고, 껐다 켜도 안 풀린다.
+    @ViewBuilder
+    private var staleGrantHelp: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("목록에 켜져 있는데도 안 되면 예전 버전의 권한 기록이 남아 있는 것입니다. "
+                 + "다시 빌드할 때 앱 서명이 바뀌면서 생깁니다.")
+                .font(.caption)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("1. 손쉬운 사용 목록에서 CapsLock Control 을 고르고 − 로 지웁니다 (끄는 게 아니라 삭제)\n"
+                 + "2. 앱을 종료했다가 다시 켜고, 물어보면 허용합니다")
+                .font(.caption)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("그래도 안 되면 터미널에서 아래를 실행한 뒤 앱을 다시 켜세요.")
+                .font(.caption)
+            HStack(spacing: 6) {
+                Text(Self.accessibilityResetCommand)
+                    .font(.caption2).monospaced()
+                    .textSelection(.enabled)
+                    .padding(.horizontal, 6).padding(.vertical, 3)
+                    .background(RoundedRectangle(cornerRadius: 4).fill(Color.secondary.opacity(0.15)))
+                Button("복사") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(Self.accessibilityResetCommand, forType: .string)
+                }
+                .controlSize(.mini)
+            }
+        }
+        .padding(.top, 2)
+    }
+
+    private static let accessibilityResetCommand =
+        "tccutil reset Accessibility dev.itaehyeok.CapsLockControl"
+
 
     private var conflictBanner: some View {
         banner(tint: .yellow, icon: "bolt.trianglebadge.exclamationmark.fill") {

@@ -84,6 +84,20 @@ Turn on CapsLock Control in
 If you granted it but shortcuts still do nothing, **quit and reopen the app**.
 macOS sometimes needs a relaunch before the grant takes effect.
 
+If it is *still* dead while the checkbox looks on, the grant belongs to an older
+build. Accessibility permission is tied to the app's code signature, and an ad-hoc
+signature changes on every build, so rebuilding leaves a stale entry that toggling
+off and on does not clear. Fix it by **removing** the entry (select it, press −),
+then relaunching and granting again. If that does not do it:
+
+```bash
+tccutil reset Accessibility dev.itaehyeok.CapsLockControl
+```
+
+The permission banner in the app has a "이미 켰는데도 안 될 때" button with the same
+steps. To avoid this entirely, sign with a stable identity — see
+`Config/Signing.local.xcconfig.example`.
+
 ### 3. If you use Karabiner
 
 Two tools grabbing the same keys will collide. You do not have to uninstall it —
@@ -660,6 +674,19 @@ Apple 개발자 계정이 없어도 된다(ad-hoc 서명).
 
 허용했는데 단축키가 안 먹으면 **앱을 한 번 껐다 켜자**. macOS 가 권한을 반영하는
 데 재실행이 필요한 경우가 있다.
+
+그래도 안 되는데 목록에는 켜져 있다면 **예전 빌드의 권한 기록이 남은 것**이다.
+손쉬운 사용 권한은 앱의 코드 서명에 묶이는데, ad-hoc 서명은 빌드할 때마다 바뀐다.
+그래서 다시 빌드하면 낡은 기록이 남고, 껐다 켜는 것으로는 안 풀린다.
+목록에서 **− 로 지운 뒤**(끄는 게 아니라 삭제) 앱을 다시 켜고 허용하면 된다.
+그래도 안 되면:
+
+```bash
+tccutil reset Accessibility dev.itaehyeok.CapsLockControl
+```
+
+앱의 권한 배너에 있는 **"이미 켰는데도 안 될 때"** 버튼에 같은 안내가 있다.
+아예 겪고 싶지 않으면 고정된 서명을 쓰자 — `Config/Signing.local.xcconfig.example` 참고.
 
 ### 3. Karabiner 를 쓰고 있다면
 
