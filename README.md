@@ -173,11 +173,78 @@ make test             # unit tests
 make icon             # regenerate the icon (Tools/make-icon.swift)
 make reset-hid        # restore the keyboard after an abnormal exit
 make refresh-icon-cache
+make release          # signed + notarized DMG (needs a paid Apple account)
 ```
 
 **Launch at login only works properly if you `make install` first.**
 `SMAppService` remembers the app's path at registration time, so registering from
 inside `build/` fails silently once the app moves. Settings warns about this.
+
+## Distributing a build to other people
+
+Anyone can build this from source with no Apple account — that is the default.
+The cost is an **ad-hoc signature**, which changes on every build, so macOS
+re-asks for Accessibility permission each time and Gatekeeper warns on first launch.
+
+With a **paid Apple Developer account** you can hand people a DMG they just drag
+into Applications. No warning, no right-click-open, and the Accessibility grant
+survives updates because the signature stays the same.
+
+### One-time setup
+
+**1. Create a Developer ID Application certificate.** This is not the same as
+`Apple Development`, which only works on your own machines.
+
+> Xcode › Settings › Accounts › select your account › Manage Certificates
+> › + › Developer ID Application
+
+You need the Account Holder or Admin role on the team. Check which team the
+certificate belongs to — if you are a member of a company team, do not ship a
+personal app under it.
+
+**2. Store notarization credentials in the keychain.**
+
+```bash
+xcrun notarytool store-credentials CapsLockControl \
+  --apple-id <your Apple ID> --team-id <your team ID> --password <app-specific password>
+```
+
+The app-specific password comes from appleid.apple.com › Sign-In and Security ›
+App-Specific Passwords. It is not your account password. Neither this repository
+nor the release script stores it — it lives in your keychain.
+
+### Building a release
+
+```bash
+make release VERSION=1.0
+```
+
+That runs `Tools/release.sh`, which:
+
+1. builds Release with Hardened Runtime and a secure timestamp,
+2. checks the signature and refuses to continue if `get-task-allow` or the app
+   sandbox slipped in — either one gets rejected by the notary service,
+3. notarizes the app and staples the ticket to it,
+4. packages a DMG with an `/Applications` symlink, and signs it,
+5. notarizes and staples the DMG, then verifies it the way the recipient's Mac will.
+
+The result lands in `dist.noindex/CapsLockControl-<version>.dmg`.
+
+`SKIP_NOTARIZE=1 make release` does a local dry run. Do not hand that DMG to
+anyone — Gatekeeper will block it.
+
+### Notes specific to this app
+
+- **The sandbox must stay off.** `CGEventTap` and `hidutil` do not work inside it.
+  Developer ID distribution does not require the sandbox; only the App Store does.
+- **Hardened Runtime needs one entitlement**, `com.apple.security.automation.apple-events`,
+  because the Spotify media shortcuts send Apple Events. It lives in
+  `Config/CapsLockControl.entitlements`. Everything else — the event tap, IOKit
+  caps-lock state, spawning `hidutil` and `git` — runs untouched under Hardened Runtime.
+- **There is no auto-updater.** Sparkle would be an external dependency and this
+  project has none. Updating means downloading the new DMG.
+- **GitHub Release assets on a private repo need authentication to download.**
+  Either make the repository public or send people the file directly.
 
 ## Why it works the way it does
 
@@ -768,11 +835,79 @@ make test             # 유닛 테스트
 make icon             # 아이콘 다시 생성 (Tools/make-icon.swift)
 make reset-hid        # 비정상 종료 후 키보드 복구
 make refresh-icon-cache
+make release          # 서명 + 공증된 DMG (유료 Apple 계정 필요)
 ```
 
 **로그인 시 자동 실행을 쓰려면 `make install` 로 설치한 뒤 켜야 한다.**
 `SMAppService` 는 등록 시점의 앱 경로를 기억하므로, `build/` 안에서 등록하면
 앱을 옮기는 순간 조용히 실패한다. 설정 창에 이 경고가 뜬다.
+
+## 남에게 배포하기
+
+Apple 계정 없이도 누구나 소스에서 빌드할 수 있다 — 그게 기본값이다. 대신
+**ad-hoc 서명**이라 빌드할 때마다 서명이 바뀐다. 그래서 손쉬운 사용 권한을 매번
+다시 줘야 하고, 처음 열 때 Gatekeeper 경고가 뜬다.
+
+**유료 Apple 개발자 계정**이 있으면 DMG 를 건네주면 끝이다. 받는 사람은 끌어다
+놓기만 하면 된다. 경고창도, 우클릭 열기도 없고, 서명이 고정되므로 업데이트해도
+손쉬운 사용 권한이 풀리지 않는다.
+
+### 한 번만 해두는 준비
+
+**1. Developer ID Application 인증서를 만든다.** `Apple Development` 와 다른
+인증서다. 그건 내 기기에서만 쓸 수 있다.
+
+> Xcode › Settings › Accounts › 계정 선택 › Manage Certificates
+> › + › Developer ID Application
+
+팀에서 Account Holder 또는 Admin 권한이 있어야 만들 수 있다. 인증서가 어느 팀
+소속인지도 확인하자 — 회사 팀에 소속돼 있다면 개인 앱을 그 팀 이름으로 내보내면
+안 된다.
+
+**2. 공증 자격증명을 키체인에 저장한다.**
+
+```bash
+xcrun notarytool store-credentials CapsLockControl \
+  --apple-id <Apple ID> --team-id <팀 ID> --password <앱 암호>
+```
+
+앱 암호는 appleid.apple.com › 로그인 및 보안 › 앱 암호 에서 만든다. 계정
+비밀번호가 아니다. 이 저장소도 릴리스 스크립트도 암호를 담지 않는다 — 키체인에만
+있다.
+
+### 릴리스 만들기
+
+```bash
+make release VERSION=1.0
+```
+
+`Tools/release.sh` 가 이 순서로 돈다:
+
+1. 하드닝 런타임과 보안 타임스탬프를 켜고 Release 빌드
+2. 서명을 확인하고, `get-task-allow` 나 샌드박스가 끼어들었으면 중단
+   — 둘 중 하나만 있어도 공증이 거부된다
+3. 앱을 공증하고 티켓을 앱에 붙인다(staple)
+4. `/Applications` 심볼릭 링크를 넣은 DMG 를 만들고 서명
+5. DMG 를 공증하고 스테이플한 뒤, 받는 사람의 Mac 이 하는 것과 같은 검사로 확인
+
+결과물은 `dist.noindex/CapsLockControl-<버전>.dmg` 에 나온다.
+
+`SKIP_NOTARIZE=1 make release` 는 로컬 점검용이다. 그렇게 만든 DMG 는 남에게
+주면 안 된다 — Gatekeeper 가 막는다.
+
+### 이 앱에만 해당하는 것
+
+- **샌드박스는 켜면 안 된다.** 샌드박스 안에서는 `CGEventTap` 과 `hidutil` 이
+  동작하지 않는다. Developer ID 배포는 샌드박스를 요구하지 않는다. 앱스토어만
+  요구한다.
+- **하드닝 런타임에 entitlement 가 하나 필요하다.** Spotify 미디어 단축키가 Apple
+  Event 를 보내므로 `com.apple.security.automation.apple-events` 를 붙인다.
+  `Config/CapsLockControl.entitlements` 에 있다. 나머지 — 이벤트탭, IOKit Caps
+  Lock 상태, `hidutil` 과 `git` 실행 — 는 하드닝 런타임에서 그대로 동작한다.
+- **자동 업데이트는 없다.** Sparkle 은 외부 의존성이고 이 프로젝트에는 외부
+  의존성이 없다. 업데이트는 새 DMG 를 받는 것이다.
+- **비공개 저장소의 Release 파일은 받으려면 인증이 필요하다.** 저장소를 공개로
+  바꾸거나 파일을 직접 건네주자.
 
 ## 왜 이렇게 만들었나
 

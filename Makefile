@@ -8,7 +8,7 @@ SCHEME:= CapsLockControl
 BUILD := $(CURDIR)/build.noindex
 APP   := $(BUILD)/Build/Products/Debug/CapsLockControl.app
 
-.PHONY: build run test clean stop reset-hid install icon refresh-icon-cache
+.PHONY: build run test clean stop reset-hid install icon refresh-icon-cache release
 
 build:
 	@xcodebuild -project $(PROJ) -scheme $(SCHEME) -configuration Debug \
@@ -54,9 +54,14 @@ refresh-icon-cache:
 	@$(LSREG) -f $(APP) 2>/dev/null || true
 	@echo "아이콘 캐시를 갱신했습니다."
 
+# 남에게 나눠 줄 DMG 를 만든다. Developer ID 인증서와 공증 자격증명이 필요하다.
+# 없으면 스크립트가 무엇을 어디서 만들어야 하는지 알려 준다.
+release:
+	@VERSION=$(VERSION) ./Tools/release.sh
+
 reset-hid:
 	@hidutil property --set '{"UserKeyMapping":[]}' >/dev/null
 	@echo "HID 리맵을 모두 해제했습니다."
 
 clean:
-	@rm -rf $(BUILD)
+	@rm -rf $(BUILD) $(CURDIR)/dist.noindex

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  하드닝 런타임에서는 다른 앱에 Apple Event 를 보내려면 이 권한이 필요하다.
+	  MediaController 가 Spotify 전용 미디어 키에서만 쓴다. 다른 용도는 없다.
+	  공증(notarization)은 하드닝 런타임을 요구하므로 배포 빌드에는 반드시 붙는다.
+
+	  샌드박스는 켜지 않는다 — CGEventTap 과 hidutil 이 샌드박스 밖에서만 동작한다.
+	  Developer ID 배포는 샌드박스를 요구하지 않는다 (App Store 만 요구한다).
+	-->
+	<key>com.apple.security.automation.apple-events</key>
+	<true/>
+</dict>
+</plist>
