@@ -56,6 +56,7 @@ struct KeyboardEditorView: View {
                 ApplicationPickerView(
                     title: "\(selectedLayer.shortName) + \(label(for: identifier))",
                     existingBindings: bindings,
+                    mediaTarget: model.config.defaults.mediaTarget,
                     onCancel: { pickerKeyIdentifier = nil },
                     onSelect: { picked in assign(picked, to: identifier) }
                 )

@@ -36,17 +36,24 @@ struct CapsLockControlConfig: Codable, Equatable, Sendable {
         var capsLockTapTogglesCapsLock: Bool
         /// 위 판정의 시간 한도(밀리초). 이보다 오래 누르고 있었으면 탭이 아니다.
         var layerTapTimeoutMilliseconds: Int
+        /// 새로 만드는 미디어 단축키가 명령을 보낼 곳.
+        ///
+        /// 개별 단축키마다 따로 지정할 수 있고, 이건 새로 만들 때의 출발점이다.
+        /// `.system` 이면 하드웨어 미디어 키와 같은 경로라 브라우저의 유튜브도 받는다.
+        var mediaTarget: MediaTarget
 
         static let defaultTapTimeout = 250
 
         init(whenAlreadyActive: AlreadyActiveBehavior = .hide,
              unmappedKeyPolicy: UnmappedKeyPolicy = CapsLockControlPolicy.unmappedKey,
              capsLockTapTogglesCapsLock: Bool = true,
-             layerTapTimeoutMilliseconds: Int = Defaults.defaultTapTimeout) {
+             layerTapTimeoutMilliseconds: Int = Defaults.defaultTapTimeout,
+             mediaTarget: MediaTarget = .system) {
             self.whenAlreadyActive = whenAlreadyActive
             self.unmappedKeyPolicy = unmappedKeyPolicy
             self.capsLockTapTogglesCapsLock = capsLockTapTogglesCapsLock
             self.layerTapTimeoutMilliseconds = layerTapTimeoutMilliseconds
+            self.mediaTarget = mediaTarget
         }
 
         init(from decoder: any Decoder) throws {
@@ -60,6 +67,8 @@ struct CapsLockControlConfig: Codable, Equatable, Sendable {
                 Bool.self, forKey: .capsLockTapTogglesCapsLock) ?? true
             layerTapTimeoutMilliseconds = try c.decodeIfPresent(
                 Int.self, forKey: .layerTapTimeoutMilliseconds) ?? Defaults.defaultTapTimeout
+            // 이 키가 없던 시절의 설정 파일은 시스템 전체가 기본이었다. 그대로 읽는다.
+            mediaTarget = try c.decodeIfPresent(MediaTarget.self, forKey: .mediaTarget) ?? .system
         }
     }
 
@@ -189,6 +198,26 @@ extension CapsLockControlConfig {
             keys.removeValue(forKey: canonical)
         }
         layers[layer.rawValue] = keys
+    }
+
+    /// 이미 걸려 있는 미디어 단축키를 전부 한 대상으로 옮긴다.
+    ///
+    /// 하나씩 고치게 하면 재생/다음/이전을 세 번 눌러야 한다. 셋 다 같은 곳으로
+    /// 보내고 싶은 게 보통이라 한 번에 옮길 길을 둔다.
+    /// - Returns: 실제로 바뀐 개수.
+    @discardableResult
+    mutating func moveMediaShortcuts(to target: MediaTarget) -> Int {
+        var changed = 0
+        for layer in LayerKey.allCases {
+            for (identifier, action) in sortedBindings(for: layer) {
+                guard case .media(let command, let current) = action,
+                      current != target else { continue }
+                setAction(.media(command: command, target: target),
+                          layer: layer, keyIdentifier: identifier)
+                changed += 1
+            }
+        }
+        return changed
     }
 
     /// 두 키의 동작을 맞바꾼다. 한쪽이 비어 있으면 "옮기기"가 된다.

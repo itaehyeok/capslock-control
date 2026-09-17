@@ -435,6 +435,17 @@ and it keeps working if you switch to Apple Music.
 Spotify regardless of what is playing, but asks for automation permission once. If
 Spotify is not running it says so rather than launching it.
 
+**Pick `spotify` if a browser keeps stealing the keys.** "Whatever is currently
+playing" includes a YouTube tab in Chrome or Safari, so with `system` those tabs
+answer your play/pause just as readily as Spotify does. `spotify` never touches them.
+
+Both places to change it:
+
+- **One shortcut** — select the key in Key Layout, then use the *보낼 곳* picker.
+  A button below it offers to move the remaining media shortcuts along with it.
+- **New shortcuts** — Settings › 미디어 키 sets the target for shortcuts you
+  create from then on, and warns when existing ones still point elsewhere.
+
 No private frameworks such as MediaRemote are used.
 
 ## Window layout
@@ -1093,6 +1104,17 @@ Apple Music 으로 갈아타도 그대로 동작한다.
 `target: "spotify"` 는 Spotify 에만 AppleScript 로 직접 명령한다. 무엇이 재생 중이든
 항상 Spotify 를 제어하지만 처음 한 번 자동화 권한을 물어본다. Spotify 가 실행 중이
 아니면 실행시키지 않고 그냥 알려 준다.
+
+**브라우저가 미디어 키를 가로채면 `spotify` 를 쓴다.** "지금 재생 중인 앱" 에는
+크롬이나 사파리의 유튜브 탭도 들어간다. 그래서 `system` 이면 유튜브가 Spotify 만큼
+쉽게 재생/일시정지를 받아 간다. `spotify` 는 유튜브를 건드리지 않는다.
+
+바꾸는 곳은 둘이다:
+
+- **단축키 하나** — Key Layout 에서 키를 고르고 *보낼 곳* 선택기를 쓴다.
+  그 아래에 나머지 미디어 단축키도 같이 옮길지 묻는 버튼이 나온다.
+- **새로 만들 것** — 설정 › 미디어 키 에서 앞으로 만드는 단축키의 대상을 정한다.
+  이미 만든 것이 다른 곳을 보고 있으면 경고하고 한 번에 옮겨 준다.
 
 MediaRemote 같은 private framework 는 쓰지 않는다.
 

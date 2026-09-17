@@ -65,6 +65,8 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
+            Section("미디어 키") { mediaSection }
+
             Section("동기화") { syncSection }
 
             Section("설정 파일") {
@@ -94,6 +96,43 @@ struct SettingsView: View {
             set: { model.sync.isImportSheetPresented = $0 }
         )) {
             SnapshotImportView(model: model) { model.sync.isImportSheetPresented = false }
+        }
+    }
+
+    // MARK: - 미디어 키
+
+    /// 재생/다음/이전을 어디로 보낼지.
+    ///
+    /// 시스템 미디어 키는 "지금 재생 중인 앱" 에게 간다. 브라우저에 유튜브 탭이
+    /// 떠 있으면 그쪽이 먼저 받는다. Spotify 만 조종하려면 대상을 바꿔야 한다.
+    @ViewBuilder
+    private var mediaSection: some View {
+        let current = model.config.defaults.mediaTarget
+        Picker("새 미디어 단축키를 보낼 곳", selection: Binding(
+            get: { current },
+            set: { model.setMediaTargetDefault($0) }
+        )) {
+            ForEach(MediaTarget.allCases, id: \.self) { target in
+                Text(target.displayName).tag(target)
+            }
+        }
+        Text(current.detail)
+            .font(.caption).foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+
+        // 기본값만 바꾸면 이미 걸어 둔 단축키는 그대로다. 그건 거의 항상 실수다.
+        let stragglers = model.mediaShortcutCount(otherThan: current)
+        if stragglers > 0 {
+            HStack {
+                Text("이미 만든 미디어 단축키 \(stragglers)개가 다른 곳을 봅니다.")
+                    .font(.caption).foregroundStyle(.orange)
+                Spacer()
+                Button("전부 \(current.displayName) 으로") {
+                    model.moveAllMediaShortcuts(to: current)
+                }
+                .controlSize(.small)
+                .disabled(!model.isEditable)
+            }
         }
     }
 

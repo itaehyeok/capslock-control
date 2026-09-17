@@ -10,6 +10,8 @@ struct ApplicationPickerView: View {
     let title: String
     /// 같은 레이어에 이미 걸린 것들. "이미 Caps+C" 힌트를 띄우는 데 쓴다.
     let existingBindings: [String: ShortcutAction]
+    /// 여기서 미디어 명령을 고르면 이 대상으로 만든다. 설정의 기본값이 들어온다.
+    let mediaTarget: MediaTarget
     let onCancel: () -> Void
     let onSelect: (ShortcutAction) -> Void
 
@@ -146,7 +148,7 @@ struct ApplicationPickerView: View {
         if let first = results.running.first ?? results.installed.first {
             onSelect(action(for: first))
         } else if let media = mediaMatches.first {
-            onSelect(.media(command: media.command, target: .system))
+            onSelect(.media(command: media.command, target: mediaTarget))
         }
     }
 
@@ -209,7 +211,7 @@ struct ApplicationPickerView: View {
             sectionHeader("미디어", count: mediaMatches.count, isLoading: false)
             ForEach(mediaMatches, id: \.command) { media in
                 Button {
-                    onSelect(.media(command: media.command, target: .system))
+                    onSelect(.media(command: media.command, target: mediaTarget))
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: media.command == .playPause ? "playpause.fill"

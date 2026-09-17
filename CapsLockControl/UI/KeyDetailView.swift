@@ -103,11 +103,12 @@ struct KeyDetailView: View {
                     .font(.system(size: 24)).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(action.displayName).font(.callout).bold()
-                    Text(target == .system ? "시스템 미디어 키 (재생 중인 앱)" : "Spotify 직접 제어")
+                    Text(target.displayName)
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
             }
+            mediaTargetPicker(current: target)
 
         case .keyStroke(let stroke):
             HStack(spacing: 10) {
@@ -129,6 +130,39 @@ struct KeyDetailView: View {
         case .unsupported(let rawType):
             Text("이 버전이 모르는 동작 타입입니다: \(rawType)")
                 .font(.callout).foregroundStyle(.orange)
+        }
+    }
+
+    /// 미디어 명령을 어디로 보낼지.
+    ///
+    /// 기본값인 시스템 미디어 키는 "지금 재생 중인 앱" 에게 간다. 브라우저에 유튜브
+    /// 탭이 떠 있으면 그쪽이 받아 가서, Spotify 만 조종하려던 의도가 깨진다.
+    private func mediaTargetPicker(current: MediaTarget) -> some View {
+        let selection = Binding<MediaTarget>(
+            get: { current },
+            set: { model.setMediaTarget($0, layer: layer, keyIdentifier: keyIdentifier) }
+        )
+        return VStack(alignment: .leading, spacing: 4) {
+            Picker("보낼 곳", selection: selection) {
+                ForEach(MediaTarget.allCases, id: \.self) { target in
+                    Text(target.displayName).tag(target)
+                }
+            }
+            .pickerStyle(.menu)
+            .font(.caption)
+            .disabled(!model.isEditable)
+
+            Text(current.detail)
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if model.mediaShortcutCount(otherThan: current) > 0 {
+                Button("나머지 미디어 단축키도 \(current.displayName) 으로") {
+                    model.moveAllMediaShortcuts(to: current)
+                }
+                .controlSize(.small)
+                .disabled(!model.isEditable)
+            }
         }
     }
 

@@ -188,6 +188,49 @@ final class EngineModel {
     }
 
     /// 키별 "이미 맨 앞일 때" 동작. nil 이면 전역 기본값을 따른다.
+    /// 이 미디어 단축키가 명령을 보낼 곳을 바꾼다.
+    ///
+    /// `.system` 은 하드웨어 미디어 키와 같은 경로라, 브라우저에서 유튜브를 틀어 두면
+    /// 그쪽이 받아 간다. Spotify 만 조종하려면 `.spotify` 로 바꾼다.
+    func setMediaTarget(_ target: MediaTarget, layer: LayerKey, keyIdentifier: String) {
+        guard case .media(let command, let current)? =
+                config.action(layer: layer, keyIdentifier: keyIdentifier),
+              current != target else { return }
+        setAction(.media(command: command, target: target),
+                  layer: layer, keyIdentifier: keyIdentifier)
+    }
+
+    /// 주어진 대상이 **아닌** 곳으로 향하는 미디어 단축키의 개수.
+    /// "나머지도 옮기기" 버튼을 띄울지 판단하는 데 쓴다.
+    func mediaShortcutCount(otherThan target: MediaTarget) -> Int {
+        LayerKey.allCases.reduce(0) { total, layer in
+            total + config.sortedBindings(for: layer).count { binding in
+                if case .media(_, let current) = binding.action { current != target } else { false }
+            }
+        }
+    }
+
+    /// 새로 만드는 미디어 단축키의 기본 대상. 이미 만든 것은 건드리지 않는다.
+    func setMediaTargetDefault(_ target: MediaTarget) {
+        guard config.defaults.mediaTarget != target else { return }
+        var updated = config
+        updated.defaults.mediaTarget = target
+        saveConfig(updated)
+    }
+
+    /// 이미 걸려 있는 미디어 단축키를 전부 한 대상으로 옮긴다.
+    /// 하나씩 고치게 하면 세 개를 세 번 눌러야 한다.
+    /// - Returns: 실제로 바뀐 개수.
+    @discardableResult
+    func moveAllMediaShortcuts(to target: MediaTarget) -> Int {
+        var updated = config
+        let changed = updated.moveMediaShortcuts(to: target)
+        guard changed > 0 else { return 0 }
+        saveConfig(updated)
+        appendLog("미디어 단축키 \(changed)개를 \(target.displayName) 으로 옮겼습니다.")
+        return changed
+    }
+
     func setWhenAlreadyActive(
         _ behavior: AlreadyActiveBehavior?,
         layer: LayerKey,
