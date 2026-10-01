@@ -4,7 +4,7 @@ import os
 
 /// 미디어 재생 제어.
 ///
-/// 두 가지 경로가 있다.
+/// 세 가지 경로가 있다.
 ///
 /// **`.system` (기본)** — 하드웨어 미디어 키와 똑같은 시스템 이벤트를 만들어 보낸다.
 /// macOS 가 "지금 재생 중인 앱"에게 전달하므로 Spotify 가 재생 중이면 Spotify 가 받는다.
@@ -13,6 +13,9 @@ import os
 ///
 /// **`.spotify`** — Spotify 에만 AppleScript 로 직접 명령한다. 무엇이 재생 중이든
 /// 항상 Spotify 를 제어하지만, 처음 한 번 자동화 권한을 물어본다.
+///
+/// **`.youTubeMusic`** — Chrome 의 YouTube Music 탭에서 AppleScript 로 자바스크립트를
+/// 실행해 플레이어 버튼을 누른다. 스크립트 내용은 `YouTubeMusicScript` 에 있다.
 enum MediaController {
 
     private static let log = Logger(subsystem: "dev.itaehyeok.CapsLockControl", category: "Media")
@@ -32,6 +35,8 @@ enum MediaController {
             report(.succeeded(label(for: command)))
         case .spotify:
             controlSpotify(command, report: report)
+        case .youTubeMusic:
+            controlYouTubeMusic(command, report: report)
         }
     }
 
@@ -117,6 +122,45 @@ enum MediaController {
                 } else {
                     report(.succeeded("Spotify \(label(for: command))"))
                 }
+            }
+        }
+    }
+
+    // MARK: - YouTube Music (Chrome 탭) 직접 제어
+
+    @MainActor
+    private static func controlYouTubeMusic(
+        _ command: MediaCommand,
+        report: @escaping @MainActor (ActionOutcome) -> Void
+    ) {
+        let isRunning = NSWorkspace.shared.runningApplications
+            .contains { $0.bundleIdentifier == YouTubeMusicScript.chromeBundleIdentifier }
+        guard isRunning else {
+            // 명령만 보내면 Chrome 이 새로 뜬다. 그래도 YouTube Music 탭은 없으니 의미가 없다.
+            report(.failed("Chrome 이 실행 중이 아닙니다."))
+            return
+        }
+
+        let source = YouTubeMusicScript.appleScript(for: command)
+        scriptQueue.async {
+            var errorInfo: NSDictionary?
+            let result = NSAppleScript(source: source)?.executeAndReturnError(&errorInfo)
+            let outcome = YouTubeMusicScript.outcome(
+                for: command,
+                result: errorInfo == nil ? result?.stringValue : nil,
+                errorNumber: errorInfo?[NSAppleScript.errorNumber] as? Int,
+                errorMessage: errorInfo?[NSAppleScript.errorMessage] as? String
+            )
+            // 화면 구조에 기대는 경로라 결과를 시스템 로그에도 남긴다.
+            // 깨지면 `log show` 로 무엇을 못 찾았는지 바로 볼 수 있다.
+            switch outcome {
+            case .succeeded(let message):
+                log.notice("\(message, privacy: .public)")
+            case .failed(let message):
+                log.error("\(message, privacy: .public)")
+            }
+            Task { @MainActor in
+                report(outcome)
             }
         }
     }

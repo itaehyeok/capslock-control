@@ -100,14 +100,18 @@ enum MediaCommand: String, Codable, Hashable, Sendable {
 /// 미디어 명령을 누구에게 보낼지.
 /// `.system` 은 하드웨어 미디어 키와 같은 경로 → 지금 재생 중인 앱이 받는다.
 /// `.spotify` 는 Spotify 에 직접 AppleScript 를 보낸다(자동화 권한 필요).
+/// `.youTubeMusic` 은 Chrome 의 YouTube Music 탭에 직접 보낸다(자동화 권한 +
+/// Chrome 의 "Apple Events의 자바스크립트 허용" 필요).
 enum MediaTarget: String, Codable, Hashable, Sendable, CaseIterable {
     case system
     case spotify
+    case youTubeMusic
 
     var displayName: String {
         switch self {
         case .system: "시스템 전체"
         case .spotify: "Spotify 전용"
+        case .youTubeMusic: "YouTube Music 전용"
         }
     }
 
@@ -118,6 +122,10 @@ enum MediaTarget: String, Codable, Hashable, Sendable, CaseIterable {
             "재생 중인 아무 앱이나 받습니다 — 브라우저의 유튜브도 포함입니다."
         case .spotify:
             "Spotify 에만 보냅니다. 유튜브는 반응하지 않습니다. "
+            + "처음 쓸 때 자동화 권한을 한 번 물어봅니다."
+        case .youTubeMusic:
+            "Chrome 에 열린 YouTube Music 탭에만 보냅니다. 다른 유튜브 탭은 반응하지 않습니다. "
+            + "Chrome 의 보기 › 개발자 › Apple Events의 자바스크립트 허용을 켜 두어야 하고, "
             + "처음 쓸 때 자동화 권한을 한 번 물어봅니다."
         }
     }

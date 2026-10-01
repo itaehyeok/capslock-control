@@ -98,4 +98,31 @@ struct MediaTargetTests {
         #expect(config.action(layer: .rightOption, keyIdentifier: "left")
                 == .media(command: .previous, target: .spotify))
     }
+
+    @Test("YouTube Music 대상도 설정 파일을 왕복한다")
+    func youTubeMusicRoundTrip() throws {
+        var config = configWithMediaShortcuts(target: .youTubeMusic)
+        config.defaults.mediaTarget = .youTubeMusic
+        let data = try JSONEncoder().encode(config)
+        let decoded = try JSONDecoder().decode(CapsLockControlConfig.self, from: data)
+
+        #expect(String(decoding: data, as: UTF8.self).contains("\"youTubeMusic\""))
+        #expect(decoded.defaults.mediaTarget == .youTubeMusic)
+        #expect(decoded.action(layer: .capsLock, keyIdentifier: "right")
+                == .media(command: .next, target: .youTubeMusic))
+    }
+
+    /// 사용자가 실제로 한 전환: Spotify 를 그만 쓰게 되어 YouTube Music 으로 옮겼다.
+    @Test("Spotify 미디어 단축키를 YouTube Music 으로 한 번에 옮긴다")
+    func moveSpotifyToYouTubeMusic() {
+        var config = configWithMediaShortcuts(target: .spotify)
+
+        #expect(config.moveMediaShortcuts(to: .youTubeMusic) == 3)
+        #expect(config.action(layer: .capsLock, keyIdentifier: "up")
+                == .media(command: .playPause, target: .youTubeMusic))
+        #expect(config.action(layer: .capsLock, keyIdentifier: "right")
+                == .media(command: .next, target: .youTubeMusic))
+        #expect(config.action(layer: .capsLock, keyIdentifier: "left")
+                == .media(command: .previous, target: .youTubeMusic))
+    }
 }

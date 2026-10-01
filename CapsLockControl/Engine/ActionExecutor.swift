@@ -2,7 +2,7 @@ import AppKit
 import os
 
 /// 동작 실행 결과. UI 로그에 그대로 찍힌다.
-enum ActionOutcome: Sendable {
+enum ActionOutcome: Sendable, Equatable {
     case succeeded(String)
     case failed(String)
 }

@@ -266,7 +266,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "CapsLockControl는 Spotify 전용 미디어 단축키를 사용할 때만 Spotify에 명령을 보냅니다.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "CapsLockControl는 Spotify·YouTube Music 전용 미디어 단축키를 사용할 때만 Spotify 또는 Chrome(YouTube Music 탭)에 명령을 보냅니다.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				MARKETING_VERSION = 0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.itaehyeok.CapsLockControl;
@@ -290,7 +290,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "CapsLockControl는 Spotify 전용 미디어 단축키를 사용할 때만 Spotify에 명령을 보냅니다.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "CapsLockControl는 Spotify·YouTube Music 전용 미디어 단축키를 사용할 때만 Spotify 또는 Chrome(YouTube Music 탭)에 명령을 보냅니다.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				MARKETING_VERSION = 0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.itaehyeok.CapsLockControl;

@@ -24,7 +24,8 @@ dependencies — Apple frameworks only.
 - **Launch or focus an app** — brings it forward if running, launches it otherwise.
 - **Press the same key again to toggle** — hides the app or returns to the previous
   one. Configurable per key.
-- **Media control** — play/pause, next, previous. Whatever is playing receives it.
+- **Media control** — play/pause, next, previous. Whatever is playing receives it, or
+  only Spotify, or only the YouTube Music tab in Chrome.
 - **Trigger another app's global hotkey** — presses a combination like `⌃⌥⇧A` for you.
   Caps Lock is not a modifier, so other apps cannot register it directly;
   this is the way around that.
@@ -238,7 +239,7 @@ anyone — Gatekeeper will block it.
 - **The sandbox must stay off.** `CGEventTap` and `hidutil` do not work inside it.
   Developer ID distribution does not require the sandbox; only the App Store does.
 - **Hardened Runtime needs one entitlement**, `com.apple.security.automation.apple-events`,
-  because the Spotify media shortcuts send Apple Events. It lives in
+  because the Spotify and YouTube Music media shortcuts send Apple Events. It lives in
   `Config/CapsLockControl.entitlements`. Everything else — the event tap, IOKit
   caps-lock state, spawning `hidutil` and `git` — runs untouched under Hardened Runtime.
 - **There is no auto-updater.** Sparkle would be an external dependency and this
@@ -341,7 +342,7 @@ file should never quietly change your keyboard.
     two entries.
 - `whenAlreadyActive`: `nothing` | `hide` | `switchToPrevious` — overridable per key
 - `rightCommand.action`: `f18` | `none` (`none` leaves Right ⌘ alone)
-- `media.command`: `playPause` | `next` | `previous`, `target`: `system` | `spotify`
+- `media.command`: `playPause` | `next` | `previous`, `target`: `system` | `spotify` | `youTubeMusic`
 - `modifiers.swapFnAndLeftControl`: swap fn ↔ Left Control (off when absent)
 
 **Editing it by hand is fine.** The app watches the folder and re-reads on save.
@@ -438,6 +439,24 @@ Spotify is not running it says so rather than launching it.
 **Pick `spotify` if a browser keeps stealing the keys.** "Whatever is currently
 playing" includes a YouTube tab in Chrome or Safari, so with `system` those tabs
 answer your play/pause just as readily as Spotify does. `spotify` never touches them.
+
+`target: "youTubeMusic"` drives the YouTube Music tab in Chrome directly. It finds
+the first `https://music.youtube.com/` tab in any window — background tabs included —
+and presses the play/pause, next or previous button in its player bar through
+JavaScript, exactly as a click would. Other YouTube tabs never react. It needs two
+things, both once:
+
+- **Chrome › View › Developer › Allow JavaScript from Apple Events**
+  (보기 › 개발자 › Apple Events의 자바스크립트 허용). The setting is per profile, so turn
+  it on in a window of the profile that has YouTube Music open.
+- The automation permission prompt for Google Chrome.
+
+If Chrome is not running or no YouTube Music tab is open, it says so rather than
+opening one. The button lookup depends on YouTube Music's page structure; when it
+breaks, the log names the selector that was not found (`/usr/bin/log show --predicate
+'subsystem == "dev.itaehyeok.CapsLockControl" AND category == "Media"' --last 10m`).
+Use the full path: in zsh, `log` can be a shell builtin that silently shadows
+`/usr/bin/log`.
 
 Both places to change it:
 
@@ -631,7 +650,8 @@ CapsLockControl/
     KeyboardEngine.swift     wires tap ↔ state machine ↔ execution
     ActionExecutor.swift     launch / focus / toggle (MainActor)
     CapsLockState.swift      reads and writes the real caps lock state
-    MediaController.swift    system media keys · Spotify AppleScript
+    MediaController.swift    system media keys · Spotify AppleScript · YouTube Music tab
+    YouTubeMusicScript.swift AppleScript/JavaScript for the YouTube Music tab, result parsing
     KeyStrokeSender.swift    synthetic events for other apps' hotkeys
     FrontmostAppTracker.swift remembers the previous app
     GitSync.swift            export / import through system git
@@ -705,7 +725,8 @@ framework 만 쓴다.
 
 - **앱 실행/전환** — 실행 중이면 앞으로, 아니면 실행.
 - **같은 키를 다시 누르면 토글** — 숨기거나 직전 앱으로 돌아간다. 키마다 따로 정한다.
-- **미디어 제어** — 재생/일시정지·다음·이전. 지금 재생 중인 앱이 받는다.
+- **미디어 제어** — 재생/일시정지·다음·이전. 지금 재생 중인 앱이 받거나, Spotify 또는
+  Chrome 의 YouTube Music 탭만 받게 할 수 있다.
 - **다른 앱의 전역 단축키 호출** — `⌃⌥⇧A` 같은 조합을 대신 눌러 준다.
   Caps Lock 은 모디파이어가 아니라서 다른 앱이 직접 등록할 수 없는데, 이걸로 우회한다.
 
@@ -911,7 +932,7 @@ make release VERSION=1.0
 - **샌드박스는 켜면 안 된다.** 샌드박스 안에서는 `CGEventTap` 과 `hidutil` 이
   동작하지 않는다. Developer ID 배포는 샌드박스를 요구하지 않는다. 앱스토어만
   요구한다.
-- **하드닝 런타임에 entitlement 가 하나 필요하다.** Spotify 미디어 단축키가 Apple
+- **하드닝 런타임에 entitlement 가 하나 필요하다.** Spotify·YouTube Music 미디어 단축키가 Apple
   Event 를 보내므로 `com.apple.security.automation.apple-events` 를 붙인다.
   `Config/CapsLockControl.entitlements` 에 있다. 나머지 — 이벤트탭, IOKit Caps
   Lock 상태, `hidutil` 과 `git` 실행 — 는 하드닝 런타임에서 그대로 동작한다.
@@ -1014,7 +1035,7 @@ hidutil property --set '{"UserKeyMapping":[]}'
     별칭으로 적힌 기존 항목은 지워진다.
 - `whenAlreadyActive`: `nothing` | `hide` | `switchToPrevious` — 키마다 덮어쓸 수 있다
 - `rightCommand.action`: `f18` | `none` (`none` 이면 오른쪽 ⌘ 를 건드리지 않는다)
-- `media.command`: `playPause` | `next` | `previous`, `target`: `system` | `spotify`
+- `media.command`: `playPause` | `next` | `previous`, `target`: `system` | `spotify` | `youTubeMusic`
 - `modifiers.swapFnAndLeftControl`: fn ↔ 왼쪽 Control 맞바꾸기 (없으면 꺼짐)
 
 **직접 고쳐도 된다.** 앱이 설정 폴더를 감시하고 있어서 저장하는 순간 다시 읽는다.
@@ -1108,6 +1129,20 @@ Apple Music 으로 갈아타도 그대로 동작한다.
 **브라우저가 미디어 키를 가로채면 `spotify` 를 쓴다.** "지금 재생 중인 앱" 에는
 크롬이나 사파리의 유튜브 탭도 들어간다. 그래서 `system` 이면 유튜브가 Spotify 만큼
 쉽게 재생/일시정지를 받아 간다. `spotify` 는 유튜브를 건드리지 않는다.
+
+`target: "youTubeMusic"` 은 Chrome 의 YouTube Music 탭에만 직접 명령한다. 모든 창에서
+`https://music.youtube.com/` 탭을 찾아(뒤에 깔린 탭도 된다) 플레이어 바의
+재생/일시정지·다음·이전 버튼을 자바스크립트로 누른다. 사람이 클릭한 것과 같다.
+다른 유튜브 탭은 반응하지 않는다. 처음 한 번 두 가지가 필요하다:
+
+- **Chrome › 보기 › 개발자 › Apple Events의 자바스크립트 허용.** 프로필마다 따로인
+  설정이라 YouTube Music 을 연 프로필의 창에서 켠다.
+- Google Chrome 에 대한 자동화 권한 질문에 허용.
+
+Chrome 이 꺼져 있거나 YouTube Music 탭이 없으면 탭을 열지 않고 그냥 알려 준다.
+버튼 찾기는 YouTube Music 화면 구조에 기대므로, 깨지면 로그에 못 찾은 선택자가 남는다
+(`/usr/bin/log show --predicate 'subsystem == "dev.itaehyeok.CapsLockControl" AND category == "Media"' --last 10m`).
+전체 경로로 써야 한다. zsh 에서는 `log` 가 셸 내장 명령이라 `/usr/bin/log` 를 조용히 가린다.
 
 바꾸는 곳은 둘이다:
 
@@ -1294,7 +1329,8 @@ CapsLockControl/
     KeyboardEngine.swift     탭 ↔ 상태 기계 ↔ 실행 연결
     ActionExecutor.swift     앱 실행/활성화/토글 (MainActor)
     CapsLockState.swift      진짜 Caps Lock 상태를 읽고 쓴다
-    MediaController.swift    시스템 미디어 키 · Spotify AppleScript
+    MediaController.swift    시스템 미디어 키 · Spotify AppleScript · YouTube Music 탭
+    YouTubeMusicScript.swift YouTube Music 탭용 AppleScript/자바스크립트, 결과 해석
     KeyStrokeSender.swift    다른 앱의 전역 단축키를 부르는 합성 이벤트
     FrontmostAppTracker.swift 직전 앱 기록
     GitSync.swift            시스템 git 으로 export / import
