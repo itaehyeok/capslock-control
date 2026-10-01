@@ -1,9 +1,14 @@
 // 이 파일을 `Signing.local.xcconfig` 로 복사하고 자기 값으로 바꾼다.
 // 개발자 계정이 없으면 만들 필요 없다. 기본 ad-hoc 서명으로도 동작한다.
 //
-// 팀 ID 확인:
-//   security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject
-//   → OU=... 가 팀 ID
+// 팀 ID 확인 — 인증서가 여러 개일 수 있으니 전부 본다:
+//   security find-certificate -a -c "Apple Development" -p \
+//     | openssl crl2pkcs7 -nocrl -certfile /dev/stdin | openssl pkcs7 -print_certs -noout
+//   → 인증서마다 subject 의 OU=... 가 팀 ID 다. 이름 괄호 안의 값은 팀 ID 가 아니다.
+//
+// 인증서가 여러 팀에 걸쳐 있으면(회사 + 개인 등) 아래 이름을 `Apple Development` 로만
+// 두지 말고 쓸 인증서의 전체 이름을 적는다. 이름만 주면 먼저 찾은 쪽이 잡힌다.
+// 서명 결과 확인: codesign -dvvv <앱> 2>&1 | grep -E "Authority=Apple Dev|TeamIdentifier="
 
 KEYLAYER_CODE_SIGN_IDENTITY = Apple Development
 KEYLAYER_DEVELOPMENT_TEAM = XXXXXXXXXX
