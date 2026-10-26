@@ -91,10 +91,10 @@ struct KeycapView: View {
     private var glyph: some View {
         switch action {
         case .application(let target):
-            if isInstalled,
-               let icon = AppIconProvider.shared.icon(forBundleIdentifier: target.bundleIdentifier) {
+            if let icon = AppIconProvider.shared.icon(forBundleIdentifier: target.bundleIdentifier) {
                 Image(nsImage: icon).resizable()
                     .frame(width: isShort ? 14 : 20, height: isShort ? 14 : 20)
+                    .missingAppStyle(!isInstalled, badgeSize: isShort ? 7 : 9)
             } else {
                 Image(systemName: "questionmark.app.dashed")
                     .font(.system(size: 14)).foregroundStyle(.red)
@@ -242,5 +242,23 @@ struct FixedKeycapView: View {
             config.modifiers.swapFnAndLeftControl
                 ? "fn 으로 동작합니다" : "단축키로 쓸 수 없는 키입니다"
         }
+    }
+}
+
+extension View {
+    /// 설치되지 않은 앱의 아이콘. 무슨 앱인지는 알아보게 두되, 흑백으로 흐리게 그리고
+    /// 빨간 ? 를 붙여서 지금은 실행되지 않는다는 걸 보여 준다.
+    func missingAppStyle(_ isMissing: Bool, badgeSize: CGFloat) -> some View {
+        saturation(isMissing ? 0 : 1)
+            .opacity(isMissing ? 0.45 : 1)
+            .overlay(alignment: .bottomTrailing) {
+                if isMissing {
+                    Image(systemName: "questionmark.circle.fill")
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, .red)
+                        .font(.system(size: badgeSize, weight: .bold))
+                        .offset(x: badgeSize * 0.3, y: badgeSize * 0.3)
+                }
+            }
     }
 }

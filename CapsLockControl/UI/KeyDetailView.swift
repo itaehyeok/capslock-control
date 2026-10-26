@@ -72,6 +72,7 @@ struct KeyDetailView: View {
             HStack(spacing: 10) {
                 if let icon = AppIconProvider.shared.icon(forBundleIdentifier: target.bundleIdentifier) {
                     Image(nsImage: icon).resizable().frame(width: 32, height: 32)
+                        .missingAppStyle(!model.isInstalled(action), badgeSize: 13)
                 } else {
                     Image(systemName: "questionmark.app.dashed")
                         .font(.system(size: 26)).foregroundStyle(.red)

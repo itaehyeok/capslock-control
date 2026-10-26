@@ -288,7 +288,7 @@ final class EngineModel {
         }
         missingBundleIdentifiers = missingIDs
         missingApplications = missingNames.sorted()
-        AppIconProvider.shared.invalidate()
+        AppIconProvider.shared.invalidate(missingBundleIdentifiers: missingIDs)
     }
 
     func isInstalled(_ action: ShortcutAction) -> Bool {
