@@ -50,6 +50,9 @@ struct KeyboardEditorView: View {
             .padding(20)
         }
         .onAppear(perform: openPickerIfRequestedByLaunchArgument)
+        // 창을 닫아도 Window 씬은 이 뷰를 버리지 않고 숨겨 둔다. 그대로 두면 다시 열었을 때
+        // 지난번에 고른 키가 파랗게 남아 있다.
+        .onDisappear(perform: clearSelection)
         .sheet(isPresented: Binding(get: { pickerKeyIdentifier != nil },
                                     set: { if !$0 { pickerKeyIdentifier = nil } })) {
             if let identifier = pickerKeyIdentifier {
@@ -93,9 +96,7 @@ struct KeyboardEditorView: View {
             .labelsHidden()
             .fixedSize()
             .onChange(of: selectedLayer) {
-                selectedKeyIdentifier = nil
-                pickerKeyIdentifier = nil
-                dropTargetIdentifier = nil
+                clearSelection()
             }
 
             Picker("", selection: $showFixedKeys) {
@@ -266,6 +267,12 @@ struct KeyboardEditorView: View {
             return
         }
         selectedKeyIdentifier = selectedKeyIdentifier == identifier ? nil : identifier
+    }
+
+    private func clearSelection() {
+        selectedKeyIdentifier = nil
+        pickerKeyIdentifier = nil
+        dropTargetIdentifier = nil
     }
 
     /// 피커에서 고른 결과를 받는다. 이미 뭔가 걸려 있으면 확인을 먼저 받는다.

@@ -221,6 +221,8 @@ private struct KeyStrokeEditor: View {
         }
         .disabled(!model.isEditable)
         .onAppear { label = stroke.label ?? "" }
+        // 다른 키를 고르거나 창을 닫으면 Enter 없이도 이 줄이 사라진다. 치던 이름을 버리지 않는다.
+        .onDisappear(perform: commitLabel)
         .onChange(of: stroke) { _, new in
             if !isLabelFocused { label = new.label ?? "" }
         }
