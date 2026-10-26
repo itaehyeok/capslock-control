@@ -119,8 +119,9 @@ struct KeycapView: View {
     private var caption: String {
         // 빈 키는 점선 테두리와 + 로 충분하다. 폭에 따라 글자가 있다 없다 하면
         // 어수선하고, 남은 개수는 위쪽 Available 배지가 알려 준다.
+        // 설치 안 된 앱도 이름을 그대로 쓴다. 없다는 건 빨간 ? 아이콘과 빨간 글자가
+        // 알려 주고, 무슨 앱이 걸려 있었는지는 남아야 다시 깔거나 바꿀 수 있다.
         guard let action else { return "" }
-        if case .application = action, !isInstalled { return "Missing" }
         return shortName(for: action)
     }
 
