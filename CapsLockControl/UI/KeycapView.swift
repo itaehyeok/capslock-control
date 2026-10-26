@@ -178,26 +178,21 @@ struct KeycapView: View {
 /// 단축키를 걸 수 없는 키. 모양만 그려서 "여기는 쓸 수 없다" 를 보여 준다.
 ///
 /// 그냥 회색으로만 두지 않고, 이 앱이 특별하게 다루는 키에는 무엇이 되는지 적는다.
-/// Caps Lock 이 지금 보고 있는 레이어의 트리거라는 사실이 그림에 드러난다.
+/// 레이어 트리거는 지금 보는 레이어여도 따로 칠하지 않는다. 파랗게 칠했더니
+/// 선택된 키와 똑같아 보여서 헷갈렸다. 지금 레이어는 위쪽 레이어 선택기가 보여 준다.
 struct FixedKeycapView: View {
 
     let key: KeyboardLayout.FixedKey
     let width: CGFloat
     let height: CGFloat
-    let currentLayer: LayerKey
     let config: CapsLockControlConfig
-
-    private var isActiveLayerTrigger: Bool {
-        if case .layerTrigger(let layer) = key.role { return layer == currentLayer }
-        return false
-    }
 
     private var note: String? {
         switch key.role {
         case .modifier:
             return nil
         case .layerTrigger(let layer):
-            return layer == currentLayer ? "이 레이어" : layer.shortName
+            return layer.shortName
         case .rightCommand:
             return config.rightCommand.action == .f18 ? "→ F18" : nil
         case .fnKey:
@@ -208,7 +203,6 @@ struct FixedKeycapView: View {
     }
 
     private var tint: Color {
-        if isActiveLayerTrigger { return .accentColor }
         if case .layerTrigger = key.role { return .secondary }
         return note == nil ? .secondary : .orange
     }
@@ -218,7 +212,7 @@ struct FixedKeycapView: View {
             Text(key.label)
                 .font(.system(size: 9, design: .monospaced))
                 .lineLimit(1).minimumScaleFactor(0.7)
-                .foregroundStyle(isActiveLayerTrigger ? Color.accentColor : .secondary)
+                .foregroundStyle(.secondary)
             if let note {
                 Text(note)
                     .font(.system(size: 7, weight: .semibold))
@@ -228,13 +222,8 @@ struct FixedKeycapView: View {
         }
         .padding(3)
         .frame(width: width, height: height)
-        .background(RoundedRectangle(cornerRadius: 7)
-            .fill(isActiveLayerTrigger ? Color.accentColor.opacity(0.14)
-                                       : Color.secondary.opacity(0.08)))
-        .overlay(RoundedRectangle(cornerRadius: 7)
-            .strokeBorder(isActiveLayerTrigger ? Color.accentColor.opacity(0.7)
-                                               : Color.secondary.opacity(0.18),
-                          lineWidth: isActiveLayerTrigger ? 2 : 1))
+        .background(RoundedRectangle(cornerRadius: 7).fill(Color.secondary.opacity(0.08)))
+        .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Color.secondary.opacity(0.18)))
         .help(helpText)
     }
 

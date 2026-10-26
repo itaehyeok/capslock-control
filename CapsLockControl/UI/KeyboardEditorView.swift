@@ -183,7 +183,6 @@ struct KeyboardEditorView: View {
             FixedKeycapView(key: key,
                             width: KeyboardLayout.width(units),
                             height: KeyboardLayout.keyHeight,
-                            currentLayer: selectedLayer,
                             config: model.config)
         case .arrows:
             arrowCluster
