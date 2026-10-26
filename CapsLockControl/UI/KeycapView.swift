@@ -47,6 +47,8 @@ struct KeycapView: View {
                                   style: StrokeStyle(lineWidth: (isSelected || isDropTarget) ? 2 : 1,
                                                      dash: (isEmpty && !isDropTarget) ? [3, 3] : []))
             )
+            // 빈 키는 바탕이 투명이라, 이게 없으면 + 글자와 점선 위만 눌린다.
+            .contentShape(RoundedRectangle(cornerRadius: 7))
         }
         .buttonStyle(.plain)
         .help(helpText)
