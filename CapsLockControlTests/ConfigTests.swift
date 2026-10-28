@@ -324,6 +324,15 @@ struct DefaultConfigurationTests {
         #expect(options.layerTapTimeout == 0.4)
         #expect(options.unmappedKeyPolicy == .passThrough)
     }
+
+    @Test("탭 판정 시간은 설정 창 범위 안으로 맞춘다")
+    func tapTimeoutIsClamped() {
+        typealias Defaults = CapsLockControlConfig.Defaults
+        #expect(Defaults.tapTimeoutRange.contains(Defaults.defaultTapTimeout))
+        #expect(Defaults.clampedTapTimeout(300) == 300)
+        #expect(Defaults.clampedTapTimeout(0) == Defaults.tapTimeoutRange.lowerBound)
+        #expect(Defaults.clampedTapTimeout(5000) == Defaults.tapTimeoutRange.upperBound)
+    }
 }
 
 @Suite("키 조합 보내기")

@@ -6,6 +6,8 @@ struct SettingsView: View {
 
     @State private var launchState = LaunchAtLogin.state
     @State private var launchError: String?
+    /// 슬라이더를 끄는 동안의 값. 놓을 때 한 번만 저장한다(끄는 동안 파일을 계속 쓰지 않게).
+    @State private var tapTimeoutDraft: Double?
 
     var body: some View {
         TabView {
@@ -58,8 +60,7 @@ struct SettingsView: View {
                     set: { model.setCapsLockTapEnabled($0) }
                 ))
                 Text("다른 키와 조합하지 않고 \(model.config.defaults.layerTapTimeoutMilliseconds)ms "
-                     + "안에 떼면 원래 Caps Lock 기능이 동작합니다. "
-                     + "시간은 설정 파일의 layerTapTimeoutMilliseconds 로 조절합니다.")
+                     + "안에 떼면 원래 Caps Lock 기능이 동작합니다. 시간은 고급 탭에서 바꿉니다.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -83,6 +84,8 @@ struct SettingsView: View {
                 }
                 Text(model.config.defaults.unmappedKeyPolicy.explanation)
                     .font(.caption).foregroundStyle(.secondary)
+
+                tapTimeoutRow
             }
 
             Section {
@@ -133,6 +136,36 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .disabled(!model.isEditable)
+    }
+
+    // MARK: - 탭 판정 시간
+
+    @ViewBuilder
+    private var tapTimeoutRow: some View {
+        let range = CapsLockControlConfig.Defaults.tapTimeoutRange
+        let value = tapTimeoutDraft ?? Double(model.config.defaults.layerTapTimeoutMilliseconds)
+        LabeledContent("Caps Lock 단독 탭 판정 시간") {
+            HStack(spacing: 8) {
+                // step 을 주면 macOS 는 10ms 마다 눈금을 촘촘히 찍는다. 값만 10ms 로 맞춘다.
+                Slider(value: Binding(get: { value },
+                                      set: { tapTimeoutDraft = ($0 / 10).rounded() * 10 }),
+                       in: Double(range.lowerBound)...Double(range.upperBound)) { isEditing in
+                    guard !isEditing, let draft = tapTimeoutDraft else { return }
+                    model.setLayerTapTimeout(milliseconds: Int(draft))
+                    tapTimeoutDraft = nil
+                }
+                .frame(width: 180)
+                Text("\(Int(value))ms")
+                    .monospacedDigit()
+                    .frame(width: 52, alignment: .trailing)
+            }
+        }
+        // 단독 탭을 끈 상태면 이 시간은 아무 데도 쓰이지 않는다.
+        .disabled(!model.config.defaults.capsLockTapTogglesCapsLock)
+        Text("Caps Lock 을 이 시간 안에 떼야 대문자 고정으로 칩니다. 짧을수록 레이어를 쓰려다 "
+             + "그냥 놓았을 때 대문자 고정이 덜 켜지고, 길수록 천천히 눌러도 대문자 고정이 됩니다.")
+            .font(.caption).foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - 미디어 키

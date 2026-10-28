@@ -456,6 +456,15 @@ final class EngineModel {
         saveConfig(updated)
     }
 
+    /// Caps Lock 단독 탭으로 칠 시간 한도. 설정 창의 범위 밖 값은 범위 끝으로 맞춘다.
+    func setLayerTapTimeout(milliseconds: Int) {
+        let clamped = CapsLockControlConfig.Defaults.clampedTapTimeout(milliseconds)
+        guard config.defaults.layerTapTimeoutMilliseconds != clamped else { return }
+        var updated = config
+        updated.defaults.layerTapTimeoutMilliseconds = clamped
+        saveConfig(updated)
+    }
+
     private func appendLog(_ text: String) {
         logEntries.append(LogEntry(timestamp: Date(), text: text))
         if logEntries.count > Self.maxLogEntries {

@@ -394,7 +394,8 @@ toggles. Hold it with a key and it is a layer; tap it alone and it is Caps Lock.
 Both conditions must hold:
 
 - **No other key was used** while it was held (the state machine remembers)
-- It was held for less than `layerTapTimeoutMilliseconds` (250 ms by default)
+- It was held for less than `layerTapTimeoutMilliseconds` (250 ms by default,
+  adjustable from 100 to 600 ms in Settings › Advanced)
 
 The time condition exists to distinguish this from turning a layer on and then
 changing your mind.
@@ -1083,7 +1084,7 @@ Caps Lock 을 **다른 키와 조합하지 않고 짧게** 눌렀다 떼면 원�
 판정은 두 조건을 모두 만족해야 한다.
 
 - 누르고 있는 동안 **다른 키를 하나도 쓰지 않았다** (상태 기계가 기억한다)
-- 누른 시간이 `layerTapTimeoutMilliseconds`(기본 250ms) 이내다
+- 누른 시간이 `layerTapTimeoutMilliseconds`(기본 250ms, 설정 › 고급 에서 100~600ms) 이내다
 
 시간 조건이 필요한 이유는, 레이어를 켰다가 마음이 바뀌어 그냥 뗀 경우와
 구분해야 하기 때문이다.

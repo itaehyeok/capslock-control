@@ -43,6 +43,12 @@ struct CapsLockControlConfig: Codable, Equatable, Sendable {
         var mediaTarget: MediaTarget
 
         static let defaultTapTimeout = 250
+        /// 설정 창에서 고를 수 있는 탭 판정 시간(밀리초). 손으로 고친 파일 값은 그대로 읽는다.
+        static let tapTimeoutRange = 100...600
+
+        static func clampedTapTimeout(_ milliseconds: Int) -> Int {
+            min(max(milliseconds, tapTimeoutRange.lowerBound), tapTimeoutRange.upperBound)
+        }
 
         init(whenAlreadyActive: AlreadyActiveBehavior = .hide,
              unmappedKeyPolicy: UnmappedKeyPolicy = CapsLockControlPolicy.unmappedKey,
