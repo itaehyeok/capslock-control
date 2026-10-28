@@ -26,11 +26,14 @@ struct MenuBarMenu: View {
 
         Button("Open Key Layout...") { WindowOpener.shared.openKeyLayout() }
 
-        Text(model.sync.statusLine(for: model.config))
-        Button("Export to GitHub") { Task { await model.sync.export() } }
-            .disabled(!model.sync.isConfigured || model.sync.isWorking)
-        Button("Import from GitHub...") { model.sync.requestImportSheet() }
-            .disabled(!model.sync.isConfigured || model.sync.isWorking)
+        // 동기화는 고급 기능이다. 저장소를 넣은 사람에게만 메뉴에 보인다.
+        if model.sync.isConfigured {
+            Text(model.sync.statusLine(for: model.config))
+            Button("Export to GitHub") { Task { await model.sync.export() } }
+                .disabled(model.sync.isWorking)
+            Button("Import from GitHub...") { model.sync.requestImportSheet() }
+                .disabled(model.sync.isWorking)
+        }
 
         Button("Settings...") { WindowOpener.shared.openSettings() }
             .keyboardShortcut(",")

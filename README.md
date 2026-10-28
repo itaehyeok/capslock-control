@@ -553,7 +553,7 @@ open build/Build/Products/Debug/CapsLockControl.app --args -openPicker q
 
 ## GitHub sync — Export / Import
 
-Two Macs share one configuration. Put the repository address in Settings › Sync.
+Two Macs share one configuration. Put the repository address in Settings › Advanced › GitHub 동기화.
 
 | Action | What it does |
 |---|---|
@@ -1235,7 +1235,7 @@ open build/Build/Products/Debug/CapsLockControl.app --args -openPicker q
 
 ## GitHub 설정 동기화 — Export / Import
 
-집 Mac 과 회사 Mac 이 같은 설정을 쓴다. 설정 › 동기화에 저장소 주소를 넣고 쓴다.
+집 Mac 과 회사 Mac 이 같은 설정을 쓴다. 설정 › 고급 › GitHub 동기화에 저장소 주소를 넣고 쓴다.
 
 | 동작 | 하는 일 |
 |---|---|

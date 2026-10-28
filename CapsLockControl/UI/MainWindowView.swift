@@ -62,7 +62,7 @@ struct MainWindowView: View {
             } label: {
                 Image(systemName: "gearshape")
             }
-            .help("설정 (Export / Import 포함)")
+            .help("설정")
         }
     }
 

@@ -74,8 +74,6 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
-            Section("동기화") { syncSection }
-
             Section("설정 파일") {
                 Text(model.configFileURL.path)
                     .font(.caption).monospaced().textSelection(.enabled)
@@ -125,6 +123,9 @@ struct SettingsView: View {
             // 기본값 "시스템 전체" 면 하드웨어 미디어 키와 같아서 대부분 바꿀 일이 없다.
             // Spotify·YouTube Music 전용은 자동화 권한이나 Chrome 설정이 따로 필요하다.
             Section("미디어 키") { mediaSection }
+
+            // SSH 키와 git 저장소가 있어야 쓸 수 있다. Mac 이 하나면 필요 없다.
+            Section("GitHub 동기화") { syncSection }
         }
         .formStyle(.grouped)
         .disabled(!model.isEditable)
