@@ -49,8 +49,15 @@ struct MenuBarMenu: View {
             .keyboardShortcut(",")
 
         Divider()
-        // 새 버전이 있으면 맨 위에 설치 항목이 뜬다. 없을 때 지금 버전이 최신인지 여기서 본다.
-        Text("CapsLock Control v\(model.updates.currentVersion)")
+        // 새 버전이 있으면 맨 위에 설치 항목이 뜬다. 없을 때는 여기서 바로 다시 물어본다.
+        // 찾으면 다음에 메뉴를 열 때 맨 위에 설치 항목이 생긴다.
+        Text(versionLine)
+        if model.updates.available == nil {
+            Button(model.updates.isChecking ? "업데이트 확인 중…" : "업데이트 확인") {
+                Task { await model.updates.check() }
+            }
+            .disabled(model.updates.isChecking)
+        }
         Button("Quit CapsLock Control") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
     }
@@ -64,6 +71,16 @@ struct MenuBarMenu: View {
             return "⚠︎ \(blocker.name) 충돌 · 단축키가 안 먹을 수 있음"
         }
         return "동작 중 · 단축키 \(model.bindingCount)개"
+    }
+
+    /// 지금 버전과 마지막 확인 결과.
+    private var versionLine: String {
+        let version = "CapsLock Control v\(model.updates.currentVersion)"
+        switch model.updates.lastResult {
+        case .upToDate: return version + " · 최신 버전"
+        case .failed: return version + " · 새 버전 확인 실패"
+        case .available, nil: return version
+        }
     }
 
 
