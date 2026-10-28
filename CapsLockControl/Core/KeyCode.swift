@@ -15,10 +15,8 @@ struct KeyCode: Hashable, Sendable, Codable {
 // MARK: - 이 앱이 특별 취급하는 키
 
 extension KeyCode {
-    /// 레이어 A 트리거. Caps Lock 을 HID 레벨에서 여기로 리맵한다.
+    /// 레이어 트리거. Caps Lock 을 HID 레벨에서 여기로 리맵한다.
     static let f19 = KeyCode(kVK_F19)
-    /// 레이어 B 트리거. Right Option 을 HID 레벨에서 여기로 리맵한다.
-    static let f20 = KeyCode(kVK_F20)
     /// 입력 소스 전환. Right Command 를 HID 레벨에서 여기로 리맵한다.
     static let f18 = KeyCode(kVK_F18)
 }

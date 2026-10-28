@@ -150,6 +150,14 @@ extension CapsLockControlConfig {
         var warnings: [String] = []
 
         for (layerName, keys) in layers.sorted(by: { $0.key < $1.key }) {
+            if LayerKey.retiredRawValues.contains(layerName) {
+                // 빈 채로 남은 건 예전 기본 설정의 흔적일 뿐이다. 단축키가 있었다면 알린다.
+                if !keys.isEmpty {
+                    warnings.append("\(layerName) 레이어는 더 이상 쓰지 않습니다. "
+                                    + "단축키 \(keys.count)개를 건너뜁니다.")
+                }
+                continue
+            }
             guard let layer = LayerKey(rawValue: layerName) else {
                 warnings.append("알 수 없는 레이어 \"\(layerName)\" 를 건너뜁니다.")
                 continue

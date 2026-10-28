@@ -191,7 +191,7 @@ final class KeyboardEngine: @unchecked Sendable {
         case .swallowAndTapLayer:
             return nil
         case .swallow:
-            // 레이어 키 자신(F19/F20)이 삼켜진 것은 로그에 남기지 않는다.
+            // 레이어 키 자신(F19)이 삼켜진 것은 로그에 남기지 않는다.
             if type == .keyDown, LayerKey.layer(forTrigger: keyCode) == nil, let layer = layerAfter {
                 observer(.swallowedUnmapped(layer: layer, key: keyCode))
             }

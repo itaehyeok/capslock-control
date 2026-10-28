@@ -10,8 +10,8 @@ dependencies — Apple frameworks only.
 
 **Keyboard**
 
-- **Caps Lock and Right Option each become an independent layer key.**
-  `Caps + C` and `Right Option + C` are completely different shortcuts.
+- **Caps Lock becomes a layer key.** Hold it and press another key —
+  `Caps + C`, `Caps + 1` — to run whatever you assigned to that key.
 - **Tap Caps Lock alone and it still toggles caps lock.** Hold it with another
   key and it is a layer; tap it by itself and it is Caps Lock.
 - **Right Command → F18** for input-source switching (uses the macOS shortcut).
@@ -138,9 +138,9 @@ Settings › Keyboard › Right Command to `Leave alone`.
 
 ### Worth knowing
 
-**This app takes over three keys** — Caps Lock, Right Option, Right Command.
-Right Command can be switched off in Settings; the other two are layer keys and
-are fixed. **Caps Lock still works as Caps Lock when tapped alone**, so you do not
+**This app takes over two keys** — Caps Lock and Right Command.
+Right Command can be switched off in Settings; Caps Lock is the layer key and is
+fixed. **Caps Lock still works as Caps Lock when tapped alone**, so you do not
 lose it entirely.
 
 **There is no Dock icon.** Click the keyboard icon in the menu bar for the menu.
@@ -156,7 +156,7 @@ make reset-hid     # or: hidutil property --set '{"UserKeyMapping":[]}'
 ```
 
 A reboot also clears it. **The keyboard can never get locked** — the worst case is
-that Caps Lock and Right Option do nothing.
+that Caps Lock does nothing.
 
 **GitHub sync is optional.** With a single Mac you never need to set it up.
 
@@ -262,8 +262,7 @@ Instead of a driver, this uses `UserKeyMapping` in Apple's own `/usr/bin/hidutil
 
 | Physical key | After HID remap | Handled by |
 |---|---|---|
-| Caps Lock | F19 | CapsLock Control's event tap (layer A) |
-| Right Option | F20 | CapsLock Control's event tap (layer B) |
+| Caps Lock | F19 | CapsLock Control's event tap (the layer) |
 | Right Command | F18 | macOS input-source shortcut (passed straight through) |
 | fn | Left Control | macOS (optional · `modifiers.swapFnAndLeftControl`) |
 | Left Control | fn | macOS (optional · paired with the above) |
@@ -274,7 +273,7 @@ usage page but on the Apple vendor top case page (0xFF), which hidutil also hand
 Both directions must be mapped together — map only one and both keys become Control.
 
 The payoff is that **the event tap never touches modifiers**. No event synthesis, no
-flag juggling, no re-entrancy guards. All that is left is tracking F19/F20 and
+flag juggling, no re-entrancy guards. All that is left is tracking F19 and
 handling ordinary keys while a layer is held.
 
 Properties:
@@ -286,7 +285,7 @@ Properties:
 
 ### Recovering after a crash
 
-If the app crashes the mapping stays behind. Caps Lock and Right Option do nothing
+If the app crashes the mapping stays behind. Caps Lock does nothing
 (the keyboard is not locked), and this fixes it immediately:
 
 ```
@@ -324,8 +323,7 @@ file should never quietly change your keyboard.
              "bundleIdentifier": "com.google.Chrome",
              "displayName": "Google Chrome" },
       "left": { "type": "media", "command": "previous", "target": "system" }
-    },
-    "rightOption": {}
+    }
   }
 }
 ```
@@ -386,8 +384,7 @@ synthetic event carries a marker in `eventSourceUserData`, and the tap passes
 anything carrying it straight through.
 
 In the GUI: click an empty key, then the "Send key combination" field at the bottom
-of the picker, then press the combination. Use the **left-hand** modifiers when
-recording — Right Option belongs to this app.
+of the picker, then press the combination.
 
 ## Tapping Caps Lock alone
 
@@ -471,10 +468,10 @@ No private frameworks such as MediaRemote are used.
 
 ```
 ┌─ [ Key Layout ] [ Status ] ─────────────────────┐  ← tabs (title bar)
-│ CapsLock Control            [Caps][R-Opt] Stop ⚙│  ← always-visible header
+│ CapsLock Control                   [Caps] Stop ⚙│  ← always-visible header
 │ Running · 28 shortcuts                          │     layer lights are live
 ├─────────────────────────────────────────────────┤
-│ [ Caps Lock ][ Right Option ]  Used 28  Avail 28│
+│ [ Full keyboard ][ Keys only ] Used 28 Avail 28 │
 │                                                 │
 │ esc `  1 2 3 4 5 6 7 8 9 0  -  =  [delete]      │
 │ [tab]  Q W E R T Y U I O P  [  ]  \             │
@@ -635,7 +632,7 @@ rather than hanging.
 CapsLockControl/
   Core/     Pure logic, no AppKit. This is what the unit tests cover.
     KeyCode.swift            virtual key code ↔ string identifier table
-    LayerKey.swift           capsLock / rightOption
+    LayerKey.swift           capsLock
     ShortcutAction.swift     application / media / keyStroke / (room to grow)
     BindingTable.swift       lookup table normalised to key codes
     AppConfiguration.swift   on-disk schema + version/migration
@@ -713,8 +710,8 @@ framework 만 쓴다.
 
 **키보드**
 
-- **Caps Lock 과 Right Option 을 각각 독립된 레이어 키로** 쓴다.
-  `Caps + C` 와 `Right Option + C` 는 완전히 다른 단축키다.
+- **Caps Lock 을 레이어 키로** 쓴다. 누른 채로 다른 키를 치면
+  (`Caps + C`, `Caps + 1`) 그 키에 지정해 둔 동작이 실행된다.
 - **Caps Lock 을 혼자 짧게 치면 원래 대문자 고정**이 동작한다.
   조합해서 쓰면 레이어, 톡 치면 Caps Lock.
 - **Right Command → F18** 로 한/영을 전환한다 (macOS 입력 소스 단축키를 그대로 쓴다).
@@ -833,8 +830,8 @@ Caps Lock 을 눌러도 아무 반응이 없고 `Caps` 표시등도 안 들어�
 
 ### 알아 두면 좋은 것
 
-**이 앱은 세 키를 가져간다** — Caps Lock, Right Option, Right Command.
-Right Command 는 설정에서 끌 수 있지만 앞의 둘은 레이어 키라 고정이다.
+**이 앱은 두 키를 가져간다** — Caps Lock, Right Command.
+Right Command 는 설정에서 끌 수 있지만 Caps Lock 은 레이어 키라 고정이다.
 **Caps Lock 은 혼자 짧게 치면 원래 대문자 고정으로 동작**하니 완전히 잃는 건 아니다.
 
 **Dock 아이콘이 없다.** 메뉴바의 키보드 아이콘을 클릭하면 메뉴가 나온다.
@@ -849,7 +846,7 @@ make reset-hid     # 또는 hidutil property --set '{"UserKeyMapping":[]}'
 ```
 
 재부팅해도 원래대로 돌아온다. **키보드가 잠기는 일은 없다** —
-최악의 경우 Caps Lock 과 Right Option 이 아무 일도 안 하는 상태가 될 뿐이다.
+최악의 경우 Caps Lock 이 아무 일도 안 하는 상태가 될 뿐이다.
 
 **GitHub 동기화는 선택 사항이다.** Mac 이 하나면 설정하지 않아도 된다.
 
@@ -956,8 +953,7 @@ macOS 는 Caps Lock 에 hold-delay 를 걸기 때문에 레이어 키로 쓰면 
 
 | 물리 키 | HID 리맵 후 | 처리 주체 |
 |---|---|---|
-| Caps Lock | F19 | 이 앱의 event tap (레이어 A) |
-| Right Option | F20 | 이 앱의 event tap (레이어 B) |
+| Caps Lock | F19 | 이 앱의 event tap (레이어) |
 | Right Command | F18 | macOS 입력 소스 단축키 (손대지 않고 통과) |
 | fn | Left Control | macOS (선택 · `modifiers.swapFnAndLeftControl`) |
 | Left Control | fn | macOS (선택 · 위와 한 쌍) |
@@ -968,7 +964,7 @@ page(0xFF) 에 있는데, hidutil 이 그 페이지도 다룬다. 양방향 두 
 한다. 한쪽만 걸면 두 키가 모두 Control 이 된다.
 
 이렇게 하면 event tap 이 **모디파이어를 전혀 다루지 않는다.** 이벤트 합성도, 플래그
-조작도, 재진입 방지도 필요 없다. 남는 일은 "F19/F20 눌림 추적"과 "레이어가 켜져
+조작도, 재진입 방지도 필요 없다. 남는 일은 "F19 눌림 추적"과 "레이어가 켜져
 있을 때의 일반 키 처리"뿐이다.
 
 성질:
@@ -980,7 +976,7 @@ page(0xFF) 에 있는데, hidutil 이 그 페이지도 다룬다. 양방향 두 
 
 ### 강제 종료 후 복구
 
-앱이 크래시하면 매핑이 남는다. Caps Lock 과 Right Option 이 아무 일도 하지 않는
+앱이 크래시하면 매핑이 남는다. Caps Lock 이 아무 일도 하지 않는
 상태가 되며(키보드가 잠기지는 않는다), 아래 명령으로 즉시 복구된다.
 
 ```
@@ -1017,8 +1013,7 @@ hidutil property --set '{"UserKeyMapping":[]}'
              "bundleIdentifier": "com.google.Chrome",
              "displayName": "Google Chrome" },
       "left": { "type": "media", "command": "previous", "target": "system" }
-    },
-    "rightOption": {}
+    }
   }
 }
 ```
@@ -1078,8 +1073,7 @@ hidutil property --set '{"UserKeyMapping":[]}'
 그 표시를 보면 손대지 않고 흘려보낸다.
 
 GUI 에서는 빈 키를 클릭해 앱 피커를 열고 맨 아래 "키 조합 보내기" 칸을 클릭한 뒤
-원하는 조합을 누른다. 조합을 녹화할 때는 **왼쪽** 수정자를 써야 한다.
-Right Option 은 이 앱이 레이어 키로 가져갔기 때문이다.
+원하는 조합을 누른다.
 
 ## Caps Lock 단독 탭
 
@@ -1157,10 +1151,10 @@ MediaRemote 같은 private framework 는 쓰지 않는다.
 
 ```
 ┌─ [ Key Layout ] [ Status ] ─────────────────────┐  ← 탭 (타이틀바)
-│ CapsLock Control            [Caps][R-Opt] 정지 ⚙│  ← 항상 보이는 헤더
+│ CapsLock Control                   [Caps] 정지 ⚙│  ← 항상 보이는 헤더
 │ 동작 중 · 단축키 28개                            │     레이어 표시등은 실시간
 ├─────────────────────────────────────────────────┤
-│ [ Caps Lock ][ Right Option ]  Used 28  Avail 28│
+│ [ Full keyboard ][ Keys only ] Used 28 Avail 28 │
 │                                                 │
 │ esc `  1 2 3 4 5 6 7 8 9 0  -  =  [delete]      │
 │ [tab]  Q W E R T Y U I O P  [  ]  \             │
@@ -1314,7 +1308,7 @@ ssh-agent 에 없으면 멈추지 않고 "인증 실패" 로 끝난다.
 CapsLockControl/
   Core/     AppKit 의존 없는 순수 로직. 유닛 테스트 대상.
     KeyCode.swift            가상 키코드 ↔ 문자열 식별자 표
-    LayerKey.swift           capsLock / rightOption
+    LayerKey.swift           capsLock
     ShortcutAction.swift     application / media / keyStroke / (확장 자리)
     BindingTable.swift       키코드로 정규화된 조회 표
     AppConfiguration.swift   디스크 스키마 + version/migration

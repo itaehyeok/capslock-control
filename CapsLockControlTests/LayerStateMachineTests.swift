@@ -54,16 +54,6 @@ struct LayerStateMachineTests {
         #expect(machine.handle(.layerUp(.capsLock), isBound: onlyCapsC) == .swallow)
     }
 
-    @Test("레이어를 겹쳐 누르고 키를 쓰면 양쪽 다 단독 탭이 아니다")
-    func usingAKeyCancelsTapsForEveryHeldLayer() {
-        var machine = LayerStateMachine()
-        _ = machine.handle(.layerDown(.capsLock), isBound: onlyCapsC)
-        _ = machine.handle(.layerDown(.rightOption), isBound: onlyCapsC)
-        _ = machine.handle(.keyDown(key("c"), isRepeat: false), isBound: onlyCapsC)
-        #expect(machine.handle(.layerUp(.rightOption), isBound: onlyCapsC) == .swallow)
-        #expect(machine.handle(.layerUp(.capsLock), isBound: onlyCapsC) == .swallow)
-    }
-
     @Test("다시 누르면 탭 판정이 새로 시작된다")
     func tapStateResetsOnNextPress() {
         var machine = LayerStateMachine()
@@ -132,21 +122,6 @@ struct LayerStateMachineTests {
         #expect(machine.handle(.keyDown(key("q"), isRepeat: true), isBound: onlyCapsC) == .swallow)
         // Q 를 떼면 앱은 짝이 맞는 keyUp 을 받아야 한다.
         #expect(machine.handle(.keyUp(key("q")), isBound: onlyCapsC) == .passThrough)
-    }
-
-    @Test("레이어 두 개를 겹쳐 누르면 마지막에 누른 쪽이 이긴다")
-    func lastLayerWins() {
-        var machine = LayerStateMachine()
-        _ = machine.handle(.layerDown(.capsLock), isBound: onlyCapsC)
-        _ = machine.handle(.layerDown(.rightOption), isBound: onlyCapsC)
-        #expect(machine.activeLayer == .rightOption)
-        // rightOption 레이어에는 C 가 없으므로 실행되지 않는다.
-        #expect(machine.handle(.keyDown(key("c"), isRepeat: false), isBound: onlyCapsC) == .swallow)
-        // rightOption 을 떼면 caps 가 다시 유효해진다.
-        _ = machine.handle(.layerUp(.rightOption), isBound: onlyCapsC)
-        #expect(machine.activeLayer == .capsLock)
-        #expect(machine.handle(.keyDown(key("c"), isRepeat: false), isBound: onlyCapsC)
-                == .swallowAndPerform(layer: .capsLock, key: key("c")))
     }
 
     @Test("레이어 키 오토리핏은 상태를 중복으로 쌓지 않는다")
@@ -239,7 +214,6 @@ struct KeyCodeTableTests {
             #expect(KeyCodeTable.entry(for: trigger) == nil)
         }
         #expect(LayerKey.layer(forTrigger: .f19) == .capsLock)
-        #expect(LayerKey.layer(forTrigger: .f20) == .rightOption)
         #expect(LayerKey.layer(forTrigger: .f18) == nil)
     }
 }

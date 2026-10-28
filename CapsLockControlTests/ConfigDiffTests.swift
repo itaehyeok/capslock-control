@@ -92,19 +92,6 @@ struct ConfigDiffTests {
         #expect(ConfigDiff.items(current: applied, incoming: incoming).isEmpty)
     }
 
-    @Test("레이어가 다르면 같은 키여도 별개 항목이다")
-    func layersAreSeparateItems() {
-        var current = CapsLockControlConfig()
-        var incoming = CapsLockControlConfig()
-        current.setAction(chrome, layer: .capsLock, keyIdentifier: "c")
-        incoming.setAction(chrome, layer: .capsLock, keyIdentifier: "c")
-        incoming.setAction(safari, layer: .rightOption, keyIdentifier: "c")
-
-        let items = ConfigDiff.items(current: current, incoming: incoming)
-        #expect(items.count == 1)
-        #expect(items[0].label == "R-Opt + C")
-    }
-
     @Test("스칼라 설정도 항목으로 나온다")
     func scalarSettingsBecomeItems() {
         var current = CapsLockControlConfig()
@@ -145,7 +132,6 @@ struct ConfigDiffTests {
         var incoming = CapsLockControlConfig()
         for key in KeyCodeTable.all.prefix(20).map(\.identifier) {
             incoming.setAction(chrome, layer: .capsLock, keyIdentifier: key)
-            incoming.setAction(safari, layer: .rightOption, keyIdentifier: key)
         }
         incoming.defaults.whenAlreadyActive = .nothing
         let ids = ConfigDiff.items(current: CapsLockControlConfig(), incoming: incoming).map(\.id)

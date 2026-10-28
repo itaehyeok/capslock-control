@@ -122,7 +122,7 @@ enum KeyboardLayout {
             .key("space", 5),
             // 스페이스 오른쪽이 오른쪽 커맨드다. 설정에 따라 F18 로 바뀐다.
             .fixed(FixedKey(label: "command", role: .rightCommand), 1.5),
-            .fixed(FixedKey(label: "option", role: .layerTrigger(.rightOption)), 1),
+            modifier("option", 1),
             .arrows,
         ], compactIndent: 3.5),
     ]

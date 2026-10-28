@@ -2,8 +2,8 @@ import SwiftUI
 
 /// 단축키 에디터. 실제 키보드 배열대로 그린다.
 ///
-/// Caps Lock 레이어와 Right Option 레이어가 **같은 뷰**를 공유한다.
-/// 레이어를 바꾸면 어떤 `action` 을 키캡에 넘기는지만 달라진다.
+/// 레이어가 여럿이면 **같은 뷰**를 공유한다. 레이어를 바꾸면 어떤 `action` 을
+/// 키캡에 넘기는지만 달라진다. 지금은 Caps Lock 하나라 레이어 고르는 칸을 숨긴다.
 struct KeyboardEditorView: View {
 
     let model: EngineModel
@@ -87,16 +87,18 @@ struct KeyboardEditorView: View {
 
     private var layerPicker: some View {
         HStack(alignment: .center, spacing: 14) {
-            Picker("", selection: $selectedLayer) {
-                ForEach(LayerKey.allCases, id: \.self) { layer in
-                    Text(layer.displayName).tag(layer)
+            if LayerKey.allCases.count > 1 {
+                Picker("", selection: $selectedLayer) {
+                    ForEach(LayerKey.allCases, id: \.self) { layer in
+                        Text(layer.displayName).tag(layer)
+                    }
                 }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
-            .onChange(of: selectedLayer) {
-                clearSelection()
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .onChange(of: selectedLayer) {
+                    clearSelection()
+                }
             }
 
             Picker("", selection: $showFixedKeys) {

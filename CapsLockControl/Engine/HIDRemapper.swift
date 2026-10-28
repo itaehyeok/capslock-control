@@ -2,7 +2,7 @@ import Foundation
 import IOKit
 import os
 
-/// Caps Lock / Right Option / Right Command 를 HID 레벨에서 다른 키로 바꾼다.
+/// Caps Lock / Right Command 를 HID 레벨에서 다른 키로 바꾼다.
 ///
 /// 왜 event tap 이 아니라 HID 리맵인가:
 /// Caps Lock 의 토글과 LED 는 세션 event tap 보다 아래 계층에서 처리된다.
@@ -23,11 +23,9 @@ final class HIDRemapper: @unchecked Sendable {
     enum HIDUsage {
         static let capsLock: UInt64 = 0x700000039
         static let leftControl: UInt64 = 0x7000000E0
-        static let rightOption: UInt64 = 0x7000000E6
         static let rightCommand: UInt64 = 0x7000000E7
         static let f18: UInt64 = 0x70000006D
         static let f19: UInt64 = 0x70000006E
-        static let f20: UInt64 = 0x70000006F
         /// fn(지구본) 키는 일반 키보드 page 가 아니라
         /// Apple vendor top case page(0xFF) 에 있다.
         static let fn: UInt64 = 0xFF00000003
@@ -41,10 +39,9 @@ final class HIDRemapper: @unchecked Sendable {
         var id: UInt64 { source }
     }
 
-    /// 레이어 키 두 개는 구조적이라 설정과 무관하게 항상 건다.
+    /// 레이어 키는 구조적이라 설정과 무관하게 항상 건다.
     static let layerMappings: [Mapping] = [
         Mapping(source: HIDUsage.capsLock, destination: HIDUsage.f19, label: "Caps Lock → F19"),
-        Mapping(source: HIDUsage.rightOption, destination: HIDUsage.f20, label: "Right Option → F20"),
     ]
 
     static let rightCommandToF18 = Mapping(

@@ -86,16 +86,16 @@ struct MediaTargetTests {
         #expect(config.moveMediaShortcuts(to: .spotify) == 0)
     }
 
-    @Test("두 레이어 모두 옮긴다")
-    func bothLayers() {
+    @Test("여러 키를 한 번에 옮긴다")
+    func everyKey() {
         var config = CapsLockControlConfig()
         config.setAction(.media(command: .next, target: .system),
                          layer: .capsLock, keyIdentifier: "right")
         config.setAction(.media(command: .previous, target: .system),
-                         layer: .rightOption, keyIdentifier: "left")
+                         layer: .capsLock, keyIdentifier: "left")
 
         #expect(config.moveMediaShortcuts(to: .spotify) == 2)
-        #expect(config.action(layer: .rightOption, keyIdentifier: "left")
+        #expect(config.action(layer: .capsLock, keyIdentifier: "left")
                 == .media(command: .previous, target: .spotify))
     }
 

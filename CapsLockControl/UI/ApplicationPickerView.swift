@@ -240,7 +240,7 @@ struct ApplicationPickerView: View {
             .frame(height: 26)
             // 문자열을 + 로 이으면 마크다운이 아니라 그냥 글자가 된다.
             // 강조가 필요하면 하나의 리터럴로 써야 한다.
-            Text("칸을 클릭한 뒤 원하는 조합을 누르세요. 그 조합을 전역 단축키로 등록해 둔 앱이 반응합니다. Right Option 은 이 앱이 가져갔으므로 **왼쪽** 수정자를 쓰세요.")
+            Text("칸을 클릭한 뒤 원하는 조합을 누르세요. 그 조합을 전역 단축키로 등록해 둔 앱이 반응합니다.")
                 .font(.caption2).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

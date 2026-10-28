@@ -17,7 +17,6 @@ enum DefaultConfiguration {
             modifiers: CapsLockControlConfig.ModifierConfig(swapFnAndLeftControl: false),
             layers: [
                 LayerKey.capsLock.rawValue: [:],
-                LayerKey.rightOption.rawValue: [:],
             ]
         )
     }

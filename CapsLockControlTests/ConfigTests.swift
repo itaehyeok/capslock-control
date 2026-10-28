@@ -129,11 +129,11 @@ struct CapsLockControlConfigTests {
     @Test("HID 매핑 목록이 rightCommand 설정을 따라간다")
     func hidMappingsFollowConfig() {
         var config = CapsLockControlConfig()
-        #expect(HIDRemapper.mappings(for: config).count == 3)
+        #expect(HIDRemapper.mappings(for: config).count == 2)
 
         config.rightCommand.action = .disabled
         let mappings = HIDRemapper.mappings(for: config)
-        #expect(mappings.count == 2)
+        #expect(mappings.count == 1)
         #expect(!mappings.contains(HIDRemapper.rightCommandToF18))
     }
 
@@ -141,11 +141,11 @@ struct CapsLockControlConfigTests {
     func fnControlSwapIsOptional() {
         var config = CapsLockControlConfig()
         #expect(config.modifiers.swapFnAndLeftControl == false)
-        #expect(HIDRemapper.mappings(for: config).count == 3)
+        #expect(HIDRemapper.mappings(for: config).count == 2)
 
         config.modifiers.swapFnAndLeftControl = true
         let mappings = HIDRemapper.mappings(for: config)
-        #expect(mappings.count == 5)
+        #expect(mappings.count == 4)
         // 양방향이어야 한다. 한쪽만 걸면 두 키가 모두 Control 이 된다.
         #expect(mappings.contains { $0.source == HIDRemapper.HIDUsage.fn
                                  && $0.destination == HIDRemapper.HIDUsage.leftControl })
@@ -197,7 +197,7 @@ struct ConfigStoreTests {
         var config = CapsLockControlConfig()
         config.setAction(.application(ApplicationTarget(bundleIdentifier: "md.obsidian",
                                                         displayName: "Obsidian")),
-                         layer: .rightOption, keyIdentifier: "d")
+                         layer: .capsLock, keyIdentifier: "d")
         try store.save(config)
 
         let result = store.load(default: { CapsLockControlConfig() })
@@ -251,9 +251,29 @@ struct DefaultConfigurationTests {
         let (table, warnings) = config.makeBindingTable()
         #expect(warnings.isEmpty)
         #expect(table.count == 0)
-        // 레이어 두 개는 만들어 두되 비어 있다.
+        // 레이어는 만들어 두되 비어 있다.
         #expect(config.layers[LayerKey.capsLock.rawValue]?.isEmpty == true)
-        #expect(config.layers[LayerKey.rightOption.rawValue]?.isEmpty == true)
+        #expect(config.layers.count == 1)
+    }
+
+    @Test("예전 Right Option 레이어가 비어 있으면 경고 없이 건너뛴다")
+    func emptyRetiredLayerIsSilent() throws {
+        let json = #"{"layers": {"capsLock": {}, "rightOption": {}}}"#
+        let config = try JSONDecoder().decode(CapsLockControlConfig.self, from: Data(json.utf8))
+        let (table, warnings) = config.makeBindingTable()
+        #expect(warnings.isEmpty)
+        #expect(table.count == 0)
+    }
+
+    @Test("예전 Right Option 레이어에 단축키가 있으면 알리고 건너뛴다")
+    func filledRetiredLayerWarns() throws {
+        let json = #"""
+        {"layers": {"rightOption": {"d": {"type": "application", "bundleIdentifier": "md.obsidian"}}}}
+        """#
+        let config = try JSONDecoder().decode(CapsLockControlConfig.self, from: Data(json.utf8))
+        let (table, warnings) = config.makeBindingTable()
+        #expect(table.count == 0)
+        #expect(warnings.count == 1)
     }
 
     @Test("키보드를 바꾸는 설정은 꺼진 채로 시작한다")
