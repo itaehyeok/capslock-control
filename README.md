@@ -37,7 +37,6 @@ dependencies — Apple frameworks only.
 - The picker filters **running and installed apps** as you type, one character at a
   time. You never type a path or a bundle ID.
 - Apps that are not installed show as **Missing**.
-- Switch between `full keyboard` and `assignable keys only` layouts.
 
 **Configuration and sync**
 
@@ -472,7 +471,7 @@ No private frameworks such as MediaRemote are used.
 │ CapsLock Control                   [Caps] Stop ⚙│  ← always-visible header
 │ Running · 28 shortcuts                          │     layer lights are live
 ├─────────────────────────────────────────────────┤
-│ [ Full keyboard ][ Keys only ] Used 28 Avail 28 │
+│                           Used 28  Available 28 │
 │                                                 │
 │ esc `  1 2 3 4 5 6 7 8 9 0  -  =  [delete]      │
 │ [tab]  Q W E R T Y U I O P  [  ]  \             │
@@ -486,11 +485,8 @@ No private frameworks such as MediaRemote are used.
   where they belong and the widths are proportional (tab 2u, shift 2.5u, space 5u…).
   Space runs from C's left edge to M's right edge, as on a MacBook. All four arrow
   keys are half height, with ← ↓ → along the bottom.
-- Toggle between `full keyboard` and `assignable keys only`. The first draws keys you
-  **cannot** assign (shift, option…) in grey so you can see what is remapped —
-  caps lock is highlighted when you are looking at its layer, right command shows
-  `→ F18`, fn/control show the swap. The second drops them, but the arrow keys stay
-  in their real position at the far right.
+- Keys you **cannot** assign (shift, option…) are always drawn in grey so you can
+  see what is remapped — right command shows `→ F18`, fn/control show the swap.
 - Both layers **share the same keyboard view**. Switching layers only changes which
   `action` each keycap receives.
 - A keycap shows the key label, the app icon, and the app name (up to two lines).
@@ -735,7 +731,6 @@ framework 만 쓴다.
 - 앱 피커는 **실행 중인 앱 + 설치된 앱**을 한 글자 칠 때마다 걸러 준다.
   경로나 bundle ID 를 입력할 일이 없다.
 - 설치되지 않은 앱은 **Missing** 으로 표시된다.
-- `전체 키보드` / `단축키 키만` 두 배치를 전환할 수 있다.
 
 **설정과 동기화**
 
@@ -1155,7 +1150,7 @@ MediaRemote 같은 private framework 는 쓰지 않는다.
 │ CapsLock Control                   [Caps] 정지 ⚙│  ← 항상 보이는 헤더
 │ 동작 중 · 단축키 28개                            │     레이어 표시등은 실시간
 ├─────────────────────────────────────────────────┤
-│ [ Full keyboard ][ Keys only ] Used 28 Avail 28 │
+│                           Used 28  Available 28 │
 │                                                 │
 │ esc `  1 2 3 4 5 6 7 8 9 0  -  =  [delete]      │
 │ [tab]  Q W E R T Y U I O P  [  ]  \             │
@@ -1169,11 +1164,8 @@ MediaRemote 같은 private framework 는 쓰지 않는다.
   너비도 실제 비율(tab 2u, shift 2.5u, space 5u …)이다. 스페이스는 맥북처럼
   C 왼쪽 모서리에서 M 오른쪽 모서리까지다. 방향키는 네 개 모두 반 높이인
   역T자이고 ← ↓ → 가 바닥에 나란히 붙는다.
-- `전체 키보드` / `단축키 키만` 을 전환할 수 있다. 앞쪽은 shift·option 처럼
-  **단축키로 쓸 수 없는 키까지 회색으로** 그려서 무엇이 리맵돼 있는지 보여 준다
-  (caps lock 은 지금 보고 있는 레이어면 강조되고, 오른쪽 command 는 `→ F18`,
-  fn/control 은 스왑 상태를 표시한다). 뒤쪽은 걸 수 있는 키만 남기되
-  방향키는 원래 자리(오른쪽 끝)에 남는다.
+- shift·option 처럼 **단축키로 쓸 수 없는 키도 늘 회색으로** 그려서 무엇이
+  리맵돼 있는지 보여 준다(오른쪽 command 는 `→ F18`, fn/control 은 스왑 상태).
 - 두 레이어가 **같은 키보드 뷰를 공유**한다. 레이어를 바꾸면 키캡에 넘기는
   `action` 만 달라진다.
 - 키캡에는 키 문자 · 앱 아이콘 · 앱 이름(두 줄까지)이 들어간다.

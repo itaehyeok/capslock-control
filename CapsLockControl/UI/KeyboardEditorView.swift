@@ -27,10 +27,6 @@ struct KeyboardEditorView: View {
     /// 다른 레이어의 키캡이 잘못 떨어지는 것을 막는다.
     private static let dragPrefix = "capslockcontrol.shortcut"
 
-    /// 모디파이어처럼 단축키로 쓸 수 없는 키까지 그릴지.
-    /// 두 배치를 눈으로 비교할 수 있게 전환식으로 둔다.
-    @AppStorage("editor.showFixedKeys") private var showFixedKeys = true
-
     private var bindings: [String: ShortcutAction] {
         model.config.layers[selectedLayer.rawValue] ?? [:]
     }
@@ -101,15 +97,6 @@ struct KeyboardEditorView: View {
                 }
             }
 
-            Picker("", selection: $showFixedKeys) {
-                Text("전체 키보드").tag(true)
-                Text("단축키 키만").tag(false)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
-            .help("모디파이어처럼 단축키로 쓸 수 없는 키를 그릴지 고릅니다")
-
             Spacer()
 
             countBadge(label: "Used", value: usedCount, tint: .accentColor)
@@ -151,17 +138,12 @@ struct KeyboardEditorView: View {
     private var keyboard: some View {
         VStack(alignment: .leading, spacing: KeyboardLayout.gap) {
             ForEach(KeyboardLayout.rows) { row in
-                let indent = KeyboardLayout.indent(of: row, showingFixedKeys: showFixedKeys)
                 HStack(spacing: KeyboardLayout.gap) {
-                    if indent > 0 {
-                        Color.clear.frame(width: KeyboardLayout.indentWidth(indent), height: 1)
-                    }
                     // 한 행에 같은 라벨의 키가 두 번 나온다(command, option, shift).
                     // 라벨로 id 를 만들면 ForEach 가 둘을 같은 것으로 보고 엉뚱한 내용을
                     // 그린다. 배치는 고정이므로 위치를 id 로 쓴다.
-                    let elements = KeyboardLayout.elements(of: row, showingFixedKeys: showFixedKeys)
-                    ForEach(Array(elements.enumerated()), id: \.offset) { _, element in
-                        // 모디파이어를 지워도 방향키는 원래 자리(오른쪽 끝)에 있어야 한다.
+                    ForEach(Array(row.elements.enumerated()), id: \.offset) { _, element in
+                        // 행 너비가 반올림으로 조금 어긋나도 방향키는 오른쪽 끝에 붙인다.
                         if case .arrows = element { Spacer(minLength: 0) }
                         view(for: element)
                     }

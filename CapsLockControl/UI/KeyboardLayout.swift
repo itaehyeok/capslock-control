@@ -58,19 +58,11 @@ enum KeyboardLayout {
             case .arrows: 3
             }
         }
-
-        var isFixed: Bool {
-            if case .fixed = self { return true }
-            return false
-        }
     }
 
     struct Row: Identifiable {
         let id: Int
         let elements: [Element]
-        /// 모디파이어를 안 그릴 때 이 행을 얼마나 들여쓸지(유닛).
-        /// 그냥 지우면 행이 왼쪽으로 몰려서 키보드처럼 보이지 않는다.
-        let compactIndent: CGFloat
     }
 
     private static func modifier(_ label: String, _ units: CGFloat) -> Element {
@@ -86,7 +78,7 @@ enum KeyboardLayout {
             .key("6", 1), .key("7", 1), .key("8", 1), .key("9", 1), .key("0", 1),
             .key("minus", 1), .key("equal", 1),
             .key("delete", 1.5),
-        ], compactIndent: 0),
+        ]),
 
         Row(id: 1, elements: [
             .key("tab", 2),
@@ -94,7 +86,7 @@ enum KeyboardLayout {
             .key("y", 1), .key("u", 1), .key("i", 1), .key("o", 1), .key("p", 1),
             .key("leftBracket", 1), .key("rightBracket", 1),
             .key("backslash", 1.5),
-        ], compactIndent: 0),
+        ]),
 
         Row(id: 2, elements: [
             .fixed(FixedKey(label: "caps lock", role: .layerTrigger(.capsLock)), 2),
@@ -102,7 +94,7 @@ enum KeyboardLayout {
             .key("h", 1), .key("j", 1), .key("k", 1), .key("l", 1),
             .key("semicolon", 1), .key("quote", 1),
             .key("return", 2.5),
-        ], compactIndent: 1),
+        ]),
 
         Row(id: 3, elements: [
             modifier("shift", 2.5),
@@ -110,7 +102,7 @@ enum KeyboardLayout {
             .key("n", 1), .key("m", 1),
             .key("comma", 1), .key("period", 1), .key("slash", 1),
             modifier("shift", 3),
-        ], compactIndent: 1.5),
+        ]),
 
         Row(id: 4, elements: [
             .fixed(FixedKey(label: "fn", role: .fnKey), 1),
@@ -124,20 +116,6 @@ enum KeyboardLayout {
             .fixed(FixedKey(label: "command", role: .rightCommand), 1.5),
             modifier("option", 1),
             .arrows,
-        ], compactIndent: 3.5),
+        ]),
     ]
-
-    /// 모디파이어를 그릴지 여부에 따라 실제로 그릴 요소를 돌려준다.
-    static func elements(of row: Row, showingFixedKeys: Bool) -> [Element] {
-        showingFixedKeys ? row.elements : row.elements.filter { !$0.isFixed }
-    }
-
-    static func indent(of row: Row, showingFixedKeys: Bool) -> CGFloat {
-        showingFixedKeys ? 0 : row.compactIndent
-    }
-
-    /// 들여쓰기의 픽셀 값.
-    static func indentWidth(_ units: CGFloat) -> CGFloat {
-        units <= 0 ? 0 : units * unit + units * gap
-    }
 }
