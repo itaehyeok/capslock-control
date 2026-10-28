@@ -6,3 +6,4 @@ xcuserdata/
 .DS_Store
 Config/Signing.local.xcconfig
 dist.noindex/
+Config/Release.local.env

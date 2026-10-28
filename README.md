@@ -59,7 +59,12 @@ dependencies — Apple frameworks only.
 
 ### 1. Install
 
-**Xcode 26 or newer is required.** Command Line Tools alone will not do.
+Download `CapsLockControl-<version>.dmg` from
+[Releases](https://github.com/itaehyeok/capslock-control/releases/latest), open it,
+and drag the app into Applications. It is signed and notarized, so it opens without
+a warning.
+
+**Building from source needs Xcode 26 or newer.** Command Line Tools alone will not do.
 
 ```bash
 git clone https://github.com/itaehyeok/capslock-control.git
@@ -173,7 +178,7 @@ make test             # unit tests
 make icon             # regenerate the icon (Tools/make-icon.swift)
 make reset-hid        # restore the keyboard after an abnormal exit
 make refresh-icon-cache
-make release          # signed + notarized DMG (needs a paid Apple account)
+make release VERSION=x.y.z  # sign, notarize, publish to GitHub Releases (paid Apple account)
 ```
 
 **Launch at login only works properly if you `make install` first.**
@@ -216,22 +221,31 @@ nor the release script stores it — it lives in your keychain.
 ### Building a release
 
 ```bash
-make release VERSION=1.0
+make release VERSION=0.2.0
 ```
 
-That runs `Tools/release.sh`, which:
+That runs `Tools/release.sh`. One command does everything — there is nothing to
+upload by hand:
 
-1. builds Release with Hardened Runtime and a secure timestamp,
-2. checks the signature and refuses to continue if `get-task-allow` or the app
+1. checks it can publish before spending minutes on a build: on `main`, a clean
+   tree, a version higher than the last tag, a public repository, and `gh` logged in
+   as the repository owner,
+2. sets `MARKETING_VERSION` to that version and commits it,
+3. builds Release with Hardened Runtime and a secure timestamp,
+4. checks the signature and refuses to continue if `get-task-allow` or the app
    sandbox slipped in — either one gets rejected by the notary service,
-3. notarizes the app and staples the ticket to it,
-4. packages a DMG with an `/Applications` symlink, and signs it,
-5. notarizes and staples the DMG, then verifies it the way the recipient's Mac will.
+5. notarizes the app and staples the ticket to it,
+6. packages a DMG with an `/Applications` symlink, signs, notarizes and staples it,
+   then verifies it the way the recipient's Mac will,
+7. tags `v<version>`, pushes, and creates the GitHub release with the DMG.
 
-The result lands in `dist.noindex/CapsLockControl-<version>.dmg`.
+The release notes are the commit subjects since the previous tag unless you pass
+`RELEASE_NOTES_FILE=notes.md`. Values that only fit your Mac — say, a notarization
+profile stored under another name — go in `Config/Release.local.env`
+(`NOTARY_PROFILE=<name>`), which is not committed.
 
-`SKIP_NOTARIZE=1 make release` does a local dry run. Do not hand that DMG to
-anyone — Gatekeeper will block it.
+`SKIP_NOTARIZE=1 make release` does a local dry run: it builds into `dist.noindex/`
+and publishes nothing. Do not hand that DMG to anyone — Gatekeeper will block it.
 
 ### Notes specific to this app
 
@@ -243,8 +257,8 @@ anyone — Gatekeeper will block it.
   caps-lock state, spawning `hidutil` and `git` — runs untouched under Hardened Runtime.
 - **There is no auto-updater.** Sparkle would be an external dependency and this
   project has none. Updating means downloading the new DMG.
-- **GitHub Release assets on a private repo need authentication to download.**
-  Either make the repository public or send people the file directly.
+- **The repository has to be public.** The release assets of a private repository
+  cannot be downloaded without authentication.
 
 ## Why it works the way it does
 
@@ -752,7 +766,11 @@ framework 만 쓴다.
 
 ### 1. 받아서 설치
 
-**Xcode 26 이상이 필요하다.** Command Line Tools 만으로는 안 된다.
+[Releases](https://github.com/itaehyeok/capslock-control/releases/latest) 에서
+`CapsLockControl-<버전>.dmg` 를 받아 열고, 앱을 응용 프로그램 폴더로 끌어다 놓는다.
+서명·공증돼 있어 경고 없이 열린다.
+
+**소스에서 빌드하려면 Xcode 26 이상이 필요하다.** Command Line Tools 만으로는 안 된다.
 
 ```bash
 git clone https://github.com/itaehyeok/capslock-control.git
@@ -860,7 +878,7 @@ make test             # 유닛 테스트
 make icon             # 아이콘 다시 생성 (Tools/make-icon.swift)
 make reset-hid        # 비정상 종료 후 키보드 복구
 make refresh-icon-cache
-make release          # 서명 + 공증된 DMG (유료 Apple 계정 필요)
+make release VERSION=x.y.z  # 서명·공증 후 GitHub 릴리스에 올림 (유료 Apple 계정 필요)
 ```
 
 **로그인 시 자동 실행을 쓰려면 `make install` 로 설치한 뒤 켜야 한다.**
@@ -903,22 +921,29 @@ xcrun notarytool store-credentials CapsLockControl \
 ### 릴리스 만들기
 
 ```bash
-make release VERSION=1.0
+make release VERSION=0.2.0
 ```
 
-`Tools/release.sh` 가 이 순서로 돈다:
+`Tools/release.sh` 가 명령 하나로 끝까지 한다 — 손으로 올릴 파일이 없다:
 
-1. 하드닝 런타임과 보안 타임스탬프를 켜고 Release 빌드
-2. 서명을 확인하고, `get-task-allow` 나 샌드박스가 끼어들었으면 중단
+1. 빌드에 몇 분 쓰기 전에 올릴 수 있는지부터 본다: `main` 브랜치인지, 커밋 안 된
+   변경이 없는지, 지난 태그보다 버전이 큰지, 저장소가 공개인지, `gh` 가 저장소
+   주인 계정으로 로그인돼 있는지
+2. `MARKETING_VERSION` 을 그 버전으로 바꾸고 커밋
+3. 하드닝 런타임과 보안 타임스탬프를 켜고 Release 빌드
+4. 서명을 확인하고, `get-task-allow` 나 샌드박스가 끼어들었으면 중단
    — 둘 중 하나만 있어도 공증이 거부된다
-3. 앱을 공증하고 티켓을 앱에 붙인다(staple)
-4. `/Applications` 심볼릭 링크를 넣은 DMG 를 만들고 서명
-5. DMG 를 공증하고 스테이플한 뒤, 받는 사람의 Mac 이 하는 것과 같은 검사로 확인
+5. 앱을 공증하고 티켓을 앱에 붙인다(staple)
+6. `/Applications` 심볼릭 링크를 넣은 DMG 를 만들어 서명·공증·스테이플하고,
+   받는 사람의 Mac 이 하는 것과 같은 검사로 확인
+7. `v<버전>` 태그를 달고 푸시한 뒤, DMG 를 붙여 GitHub 릴리스를 만든다
 
-결과물은 `dist.noindex/CapsLockControl-<버전>.dmg` 에 나온다.
+릴리스 설명은 `RELEASE_NOTES_FILE=notes.md` 를 주지 않으면 지난 태그 뒤의 커밋
+제목으로 만든다. 공증 프로필을 다른 이름으로 저장해 둔 것처럼 이 맥에만 맞는 값은
+`Config/Release.local.env`(`NOTARY_PROFILE=<이름>`)에 적는다. 저장소에는 올라가지 않는다.
 
-`SKIP_NOTARIZE=1 make release` 는 로컬 점검용이다. 그렇게 만든 DMG 는 남에게
-주면 안 된다 — Gatekeeper 가 막는다.
+`SKIP_NOTARIZE=1 make release` 는 로컬 점검용이다. `dist.noindex/` 에 빌드만 하고
+아무것도 올리지 않는다. 그렇게 만든 DMG 는 남에게 주면 안 된다 — Gatekeeper 가 막는다.
 
 ### 이 앱에만 해당하는 것
 
@@ -931,8 +956,7 @@ make release VERSION=1.0
   Lock 상태, `hidutil` 과 `git` 실행 — 는 하드닝 런타임에서 그대로 동작한다.
 - **자동 업데이트는 없다.** Sparkle 은 외부 의존성이고 이 프로젝트에는 외부
   의존성이 없다. 업데이트는 새 DMG 를 받는 것이다.
-- **비공개 저장소의 Release 파일은 받으려면 인증이 필요하다.** 저장소를 공개로
-  바꾸거나 파일을 직접 건네주자.
+- **저장소는 공개여야 한다.** 비공개 저장소의 릴리스 파일은 인증 없이 받을 수 없다.
 
 ## 왜 이렇게 만들었나
 
