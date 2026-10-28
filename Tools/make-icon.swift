@@ -3,10 +3,12 @@ import AppKit
 // CapsLockControl 앱 아이콘 생성기.
 //
 // 핵심은 **크기별로 디테일을 줄이는 것**이다. 512px 에서 예쁜 그림을 그대로 16px 로
-// 줄이면 얼룩이 된다. 그래서 작은 크기에서는 키 개수를 줄이고 선을 굵게 잡는다.
+// 줄이면 얼룩이 된다. 그래서 작은 크기에서는 글자를 빼고 불을 키운다.
 //
-// 그림: 어두운 스퀘어클 위에 흰 키보드 판, 그 위에 어두운 키들을 파낸다.
-// 왼쪽 아래 키 하나만 파란색 — 그게 "레이어 키" 다. 16px 에서도 색으로 구분된다.
+// 그림: 어두운 스퀘어클 위에 스페이스 그레이 Caps Lock 키 하나. 왼쪽 위에 초록 불이
+// 켜져 있고, 큰 크기에서만 "caps lock" 글자를 새긴다(128px 아래에서는 읽히지 않는다).
+//
+// 좌표는 시안을 그린 단위 그대로다. 바탕(스퀘어클) 한 변을 84 로 보고 왼쪽 위에서 잰다.
 
 let outputPath = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "AppIcon.iconset"
 try? FileManager.default.createDirectory(atPath: outputPath, withIntermediateDirectories: true)
@@ -17,19 +19,29 @@ extension NSBezierPath {
     }
 }
 
-private let backgroundTop = NSColor(srgbRed: 0.20, green: 0.23, blue: 0.32, alpha: 1)
-private let backgroundBottom = NSColor(srgbRed: 0.055, green: 0.07, blue: 0.11, alpha: 1)
-private let plateColor = NSColor(srgbRed: 0.96, green: 0.97, blue: 0.99, alpha: 1)
-private let keyColor = NSColor(srgbRed: 0.11, green: 0.13, blue: 0.19, alpha: 1)
-private let accentColor = NSColor(srgbRed: 0.30, green: 0.55, blue: 1.0, alpha: 1)
+private let backgroundTop = NSColor(srgbRed: 0.14, green: 0.15, blue: 0.18, alpha: 1)
+private let backgroundBottom = NSColor(srgbRed: 0.08, green: 0.09, blue: 0.11, alpha: 1)
+private let keyShadowColor = NSColor(srgbRed: 0.04, green: 0.05, blue: 0.06, alpha: 1)
+private let keyColor = NSColor(srgbRed: 0.20, green: 0.21, blue: 0.24, alpha: 1)
+private let ledColor = NSColor(srgbRed: 0.36, green: 0.94, blue: 0.54, alpha: 1)
+private let ledGlowColor = NSColor(srgbRed: 0.24, green: 0.86, blue: 0.42, alpha: 0.25)
+private let legendColor = NSColor(srgbRed: 0.95, green: 0.95, blue: 0.96, alpha: 1)
 
-/// 크기에 따라 몇 개의 키를 그릴지. 작을수록 크고 적게.
-private func keysPerRow(for pixels: Int) -> Int {
-    switch pixels {
-    case ..<24: 3
-    case ..<48: 4
-    case ..<128: 5
-    default: 6
+/// 크기마다 무엇을 그릴지.
+private enum Detail {
+    /// 128px 이상. 글자까지 새긴다.
+    case full
+    /// 32~127px. 글자를 빼고 불을 키운다.
+    case medium
+    /// 32px 미만. 키와 불만. 불은 최소 크기를 지켜 점으로라도 남긴다.
+    case tiny
+
+    init(pixels: Int) {
+        switch pixels {
+        case ..<32: self = .tiny
+        case ..<128: self = .medium
+        default: self = .full
+        }
     }
 }
 
@@ -47,61 +59,59 @@ private func render(pixels: Int) -> Data? {
     context.imageInterpolation = .high
 
     let side = CGFloat(pixels)
+    let detail = Detail(pixels: pixels)
     // macOS 아이콘은 사방에 여백이 있다. 1024 기준 100px.
     let inset = side * 0.0977
     let body = NSRect(x: inset, y: inset, width: side - inset * 2, height: side - inset * 2)
     let bodyRadius = side * 0.1855
+    let unit = body.width / 84
+
+    /// 시안 좌표(왼쪽 위 기준) → 그림 좌표(왼쪽 아래 기준).
+    func rect(_ x: CGFloat, _ y: CGFloat, _ width: CGFloat, _ height: CGFloat) -> NSRect {
+        NSRect(x: body.minX + x * unit, y: body.maxY - (y + height) * unit,
+               width: width * unit, height: height * unit)
+    }
+    func point(_ x: CGFloat, _ y: CGFloat) -> NSPoint {
+        NSPoint(x: body.minX + x * unit, y: body.maxY - y * unit)
+    }
 
     // 1) 바탕
     NSGraphicsContext.saveGraphicsState()
     NSBezierPath.rounded(body, bodyRadius).addClip()
     NSGradient(colors: [backgroundTop, backgroundBottom])?.draw(in: body, angle: -90)
-    // 위쪽 유리 반사. 밋밋함을 덜어 준다.
-    NSGradient(colors: [NSColor(white: 1, alpha: 0.13), NSColor(white: 1, alpha: 0)])?
-        .draw(in: NSRect(x: body.minX, y: body.midY,
-                         width: body.width, height: body.height * 0.5), angle: -90)
     NSGraphicsContext.restoreGraphicsState()
 
-    // 2) 흰 키보드 판. 실루엣이 굵어야 작은 크기에서 산다.
-    let plateWidth = body.width * 0.70
-    let plateHeight = plateWidth * 0.60
-    let plate = NSRect(x: body.midX - plateWidth / 2,
-                       y: body.midY - plateHeight / 2,
-                       width: plateWidth, height: plateHeight)
-    let plateRadius = max(1, plateHeight * 0.17)
-    plateColor.setFill()
-    NSBezierPath.rounded(plate, plateRadius).fill()
+    // 2) 키. 아래로 비친 어두운 옆면을 먼저 깔고 윗면을 얹는다.
+    keyShadowColor.setFill()
+    NSBezierPath.rounded(rect(7, 23, 70, 44), 9 * unit).fill()
+    keyColor.setFill()
+    NSBezierPath.rounded(rect(7, 19, 70, 43), 9 * unit).fill()
 
-    // 3) 키를 어두운 색으로 파낸다.
-    let columns = keysPerRow(for: pixels)
-    let padding = plateHeight * 0.15
-    let inner = plate.insetBy(dx: padding, dy: padding)
-    let gap = max(pixels <= 32 ? 1 : 1.5, inner.width * 0.035)
-    let keyWidth = (inner.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
-    // 위 두 줄 + 스페이스 한 줄
-    let keyHeight = (inner.height - gap * 2) / 3
-    let keyRadius = max(0.5, keyHeight * 0.25)
-
-    for row in 0..<2 {
-        // y 는 위에서부터. NSRect 는 아래가 0 이므로 뒤집어 계산한다.
-        let y = inner.maxY - keyHeight * CGFloat(row + 1) - gap * CGFloat(row)
-        for column in 0..<columns {
-            let x = inner.minX + (keyWidth + gap) * CGFloat(column)
-            let key = NSRect(x: x, y: y, width: keyWidth, height: keyHeight)
-            // 둘째 줄 맨 왼쪽이 레이어 키(Caps Lock 자리).
-            let isLayerKey = (row == 1 && column == 0)
-            (isLayerKey ? accentColor : keyColor).setFill()
-            NSBezierPath.rounded(key, keyRadius).fill()
-        }
+    // 3) 초록 불. 작아질수록 상대적으로 키워야 불로 보인다.
+    let ledCenter = point(16, 28)
+    let ledRadius: CGFloat = switch detail {
+    case .full: 3 * unit
+    case .medium: 4.5 * unit
+    case .tiny: max(1.2, 4.5 * unit)
     }
+    if detail != .tiny {
+        let glow = ledRadius * 2
+        ledGlowColor.setFill()
+        NSBezierPath(ovalIn: NSRect(x: ledCenter.x - glow, y: ledCenter.y - glow,
+                                    width: glow * 2, height: glow * 2)).fill()
+    }
+    ledColor.setFill()
+    NSBezierPath(ovalIn: NSRect(x: ledCenter.x - ledRadius, y: ledCenter.y - ledRadius,
+                                width: ledRadius * 2, height: ledRadius * 2)).fill()
 
-    // 스페이스 바
-    let spaceInset = keyWidth + gap
-    let space = NSRect(x: inner.minX + spaceInset, y: inner.minY,
-                       width: inner.width - spaceInset * 2, height: keyHeight)
-    if space.width > 0 {
-        keyColor.setFill()
-        NSBezierPath.rounded(space, keyRadius).fill()
+    // 4) 글자. 큰 크기에서만.
+    if detail == .full {
+        let font = NSFont.systemFont(ofSize: 11.5 * unit, weight: .regular)
+        let legend = NSAttributedString(string: "caps lock",
+                                        attributes: [.font: font, .foregroundColor: legendColor])
+        // draw(at:) 의 기준은 글자 상자 왼쪽 아래다. 기준선을 맞추려고 descender 만큼 내린다.
+        let baseline = point(14, 54)
+        legend.draw(at: NSPoint(x: baseline.x, y: baseline.y + font.descender))
     }
 
     return rep.representation(using: .png, properties: [:])

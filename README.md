@@ -680,10 +680,10 @@ launching an app, is handed to `Task { @MainActor }`.
 
 The key idea is **reducing detail at small sizes**. A drawing that looks good at
 512px becomes a smudge at 16px. The first version put an SF Symbol keyboard on it and
-turned into a blur at 16–32px. Now the keyboard is drawn directly and the number of
-keys per row changes from 3 to 6 depending on size. One key in the lower left is
-blue — that is the "layer key", and at small sizes it is the only thing that reads as
-a distinguishing feature.
+turned into a blur at 16–32px. The icon is now a single space-gray Caps Lock key with
+its green light on. The "caps lock" legend is drawn only at 128px and up, where it can
+be read; below that the legend is dropped and the light is drawn larger, and at 16px
+it keeps a minimum size so it still shows as a green dot.
 
 **Note**: rebuilding to the same path leaves Finder and the app's own keycaps showing
 the old icon, because the LaunchServices icon cache keys on the path.
@@ -1354,9 +1354,9 @@ CapsLockControl/
 
 핵심은 **크기별로 디테일을 줄이는 것**이다. 512px 에서 괜찮은 그림을 그대로 16px 로
 줄이면 얼룩이 된다. 처음엔 SF Symbol 키보드를 얹었는데 16~32px 에서 흐릿한
-덩어리가 됐다. 지금은 키보드를 직접 그리고 한 줄의 키 개수를 크기에 따라 3~6개로
-바꾼다. 왼쪽 아래 키 하나만 파란색인데 그게 "레이어 키" 이고, 작은 크기에서 색으로
-구분되는 유일한 요소다.
+덩어리가 됐다. 지금은 초록 불이 켜진 스페이스 그레이 Caps Lock 키 하나를 그린다.
+"caps lock" 글자는 읽히는 128px 이상에서만 새기고, 그보다 작으면 글자를 빼고 불을
+키운다. 16px 에서는 불의 최소 크기를 지켜 초록 점으로라도 남긴다.
 
 **주의**: 같은 경로에 다시 빌드하면 Finder 와 앱 안의 키캡이 옛 아이콘을 계속
 보여 준다. LaunchServices 아이콘 캐시가 경로 단위로 잡고 있어서다.
