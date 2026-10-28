@@ -132,6 +132,12 @@ final class EngineModel {
 
     var backupDirectoryURL: URL { store.backupDirectoryURL }
 
+    /// 지금 설정을 사용자가 고른 위치에 파일로 남긴다. 설정 파일 자체는 건드리지 않는다.
+    func exportConfig(to url: URL) throws {
+        try ConfigFile.encode(config).write(to: url, options: [.atomic])
+        appendLog("파일로 내보냈습니다 — \(url.lastPathComponent)")
+    }
+
     /// 설정 파일이 읽기 전용이면 GUI 편집을 막는다.
     var isEditable: Bool { !isConfigReadOnly }
 

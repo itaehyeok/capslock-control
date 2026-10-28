@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// 설정 창. 메뉴바 › Settings... 로 열린다.
 struct SettingsView: View {
@@ -8,6 +9,13 @@ struct SettingsView: View {
     @State private var launchError: String?
     /// 슬라이더를 끄는 동안의 값. 놓을 때 한 번만 저장한다(끄는 동안 파일을 계속 쓰지 않게).
     @State private var tapTimeoutDraft: Double?
+    /// 파일로 내보내거나 가져온 결과. 저장 창은 닫히고 나면 아무것도 남기지 않아서 여기서 알려 준다.
+    @State private var fileResult: FileResult?
+
+    private struct FileResult {
+        var text: String
+        var isFailure: Bool
+    }
 
     var body: some View {
         TabView {
@@ -70,6 +78,8 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             .disabled(!model.isEditable)
+
+            Section("백업") { backupSection }
         }
         .formStyle(.grouped)
     }
@@ -183,6 +193,40 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .disabled(!model.isEditable)
+    }
+
+    // MARK: - 백업
+
+    /// GitHub 없이 단축키를 파일 하나로 남긴다. 다른 Mac 으로 옮길 때도 이 파일을 쓴다.
+    @ViewBuilder
+    private var backupSection: some View {
+        HStack {
+            Button("파일로 내보내기...") { exportToFile() }
+            Spacer()
+        }
+        if let fileResult {
+            Text(fileResult.text)
+                .font(.caption)
+                .foregroundStyle(fileResult.isFailure ? Color.red : Color.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        Text("지금 단축키와 설정을 JSON 파일 하나로 저장합니다.")
+            .font(.caption).foregroundStyle(.secondary)
+    }
+
+    private func exportToFile() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = ConfigFile.suggestedName(for: Date())
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try model.exportConfig(to: url)
+            fileResult = FileResult(text: "\(url.lastPathComponent) 로 내보냈습니다.", isFailure: false)
+        } catch {
+            fileResult = FileResult(text: "내보내지 못했습니다: \(error.localizedDescription)",
+                                    isFailure: true)
+        }
     }
 
     // MARK: - 탭 판정 시간
