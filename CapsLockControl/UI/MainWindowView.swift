@@ -112,7 +112,7 @@ struct MainWindowView: View {
     private var staleGrantHelp: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text("목록에 켜져 있는데도 안 되면 예전 버전의 권한 기록이 남아 있는 것입니다. "
-                 + "다시 빌드할 때 앱 서명이 바뀌면서 생깁니다.")
+                 + "앱을 새로 설치하면서 서명이 바뀌었을 때 생깁니다.")
                 .font(.caption)
                 .fixedSize(horizontal: false, vertical: true)
             Text("1. 손쉬운 사용 목록에서 CapsLock Control 을 고르고 − 로 지웁니다 (끄는 게 아니라 삭제)\n"

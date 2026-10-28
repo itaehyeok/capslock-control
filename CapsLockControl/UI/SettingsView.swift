@@ -212,7 +212,7 @@ struct SettingsView: View {
         TextField("저장소 주소", text: Binding(
             get: { model.sync.remoteURL },
             set: { model.sync.remoteURL = $0 }
-        ), prompt: Text("git@github.com:사용자/keylayer-config.git"))
+        ), prompt: Text("git@github.com:사용자/capslock-control-config.git"))
             .textFieldStyle(.roundedBorder)
 
         HStack {
@@ -264,9 +264,9 @@ struct SettingsView: View {
 
         if !LaunchAtLogin.isInstalledInApplications {
             // 문자열을 + 로 이으면 마크다운이 아니라 글자가 된다. 백틱을 쓰지 않는다.
-            Text("이 앱이 /Applications 에 없습니다. 등록은 앱의 현재 위치를 기억하므로, "
-                 + "개발 빌드 경로에서 켜면 앱을 옮기는 순간 조용히 실패합니다. "
-                 + "make install 로 설치한 뒤 켜 주세요.")
+            Text("이 앱이 응용 프로그램 폴더에 없습니다. 로그인 항목은 앱이 지금 있는 위치를 "
+                 + "기억하므로, 나중에 앱을 옮기면 조용히 실행되지 않습니다. "
+                 + "응용 프로그램 폴더로 옮긴 뒤 켜 주세요.")
                 .font(.caption).foregroundStyle(.orange)
         }
         if launchState == .requiresApproval {
