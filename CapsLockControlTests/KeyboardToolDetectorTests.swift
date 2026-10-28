@@ -54,6 +54,14 @@ struct KeyboardToolDetectorTests {
         let tools = KeyboardToolDetector.tools(in: list)
         #expect(tools.count == 1)
         #expect(tools.first?.isIntercepting == false)
+        #expect(tools.first?.settingsLink == .driverExtensions)
+    }
+
+    /// 주소가 URL 로 안 바뀌면 버튼을 눌러도 아무 일도 없다.
+    @Test("드라이버 확장 설정 주소는 URL 로 바뀐다")
+    func driverExtensionsLinkIsValidURL() {
+        let url = URL(string: KeyboardToolConflict.SettingsLink.driverExtensions.address)
+        #expect(url?.scheme == "x-apple.systempreferences")
     }
 
     @Test("데몬과 드라이버가 같이 돌면 경고 하나로 합친다")

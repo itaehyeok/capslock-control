@@ -11,8 +11,28 @@ struct KeyboardToolConflict: Equatable, Identifiable, Sendable {
     let isIntercepting: Bool
     /// 어떻게 치우는지 한 줄 안내.
     let hint: String
+    /// 치우는 곳을 바로 여는 시스템 설정 버튼. 없으면 안내 문구만 보인다.
+    var settingsLink: SettingsLink? = nil
 
     var id: String { name }
+
+    /// 배너에 붙는 "설정 열기" 버튼 하나.
+    struct SettingsLink: Equatable, Sendable {
+        let title: String
+        /// `x-apple.systempreferences:` 주소.
+        let address: String
+
+        /// 시스템 설정 › 일반 › 로그인 항목 및 확장 프로그램 › 드라이버 확장 시트.
+        ///
+        /// Apple 이 문서로 밝힌 주소가 아니다. `extensionPointIdentifier` 값은
+        /// `/System/Library/ExtensionKit/ExtensionPoints/com.apple.system-extension-categories-ui.appexpt`
+        /// 에 적힌 이름이고, macOS 26.7 에서 이 주소로 드라이버 확장 시트가 바로 뜨는 걸 확인했다.
+        /// 다음 macOS 에서 안 먹을 수 있으니 안내 문구에 경로를 그대로 남겨 둔다.
+        static let driverExtensions = SettingsLink(
+            title: "드라이버 확장 열기",
+            address: "x-apple.systempreferences:com.apple.ExtensionsPreferences"
+                + "?extensionPointIdentifier=com.apple.system_extension.driver_extension.extension-point")
+    }
 }
 
 /// 프로세스 목록만 보고 겹치는 키보드 도구를 찾아낸다.
@@ -44,11 +64,14 @@ enum KeyboardToolDetector {
                     + "Karabiner 설정에서 프로필을 빈 것으로 바꾸거나 앱을 완전히 제거해 주세요."))
         } else if processList.contains("karabiner-driverkit-virtualhiddevice") {
             // 드라이버 확장만 남은 상태. 키를 가로채지는 않으므로 경고가 아니라 안내다.
+            // 대신 꺼 줄 수는 없다 — 시스템 확장 해제는 그 확장을 담은 앱만 요청할 수 있고,
+            // 나머지는 사용자가 시스템 설정에서 끄는 길뿐이다. 그래서 그 창을 열어만 준다.
             found.append(KeyboardToolConflict(
                 name: "Karabiner 드라이버 확장",
                 isIntercepting: false,
                 hint: "드라이버만 남아 있고 키를 가로채지는 않습니다. 지금 동작에는 문제가 없습니다. "
-                    + "완전히 지우려면 시스템 설정 › 일반 › 로그인 항목 및 확장 프로그램 › 드라이버 확장에서 끄세요."))
+                    + "완전히 지우려면 시스템 설정 › 일반 › 로그인 항목 및 확장 프로그램 › 드라이버 확장에서 끄세요.",
+                settingsLink: .driverExtensions))
         }
 
         let others: [(needle: String, name: String)] = [

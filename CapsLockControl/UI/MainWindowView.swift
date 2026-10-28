@@ -184,8 +184,16 @@ struct MainWindowView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Button("다시 확인") { model.refreshConflictingApps() }
-                .controlSize(.small)
+            HStack(spacing: 8) {
+                ForEach(tools.compactMap(\.settingsLink), id: \.address) { link in
+                    Button(link.title) {
+                        guard let url = URL(string: link.address) else { return }
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                Button("다시 확인") { model.refreshConflictingApps() }
+            }
+            .controlSize(.small)
         }
     }
 
