@@ -42,6 +42,12 @@ struct SettingsView: View {
             Section("일반") {
                 launchAtLoginRow
             }
+            .disabled(!model.isEditable)
+
+            // 설정 파일과 상관없으니 파일이 읽기 전용이어도 누를 수 있어야 한다.
+            Section("업데이트") {
+                updateRow
+            }
 
             Section("레이어 동작") {
                 Picker("앱이 이미 맨 앞일 때", selection: Binding(
@@ -63,9 +69,50 @@ struct SettingsView: View {
                      + "안에 떼면 원래 Caps Lock 기능이 동작합니다. 시간은 고급 탭에서 바꿉니다.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            .disabled(!model.isEditable)
         }
         .formStyle(.grouped)
-        .disabled(!model.isEditable)
+    }
+
+    /// 새 버전은 알아서 확인한다. 여기서는 지금 버전을 보여 주고 바로 물어볼 수 있게만 한다.
+    private var updateRow: some View {
+        let updates = model.updates
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("지금 버전 v\(updates.currentVersion)")
+                Spacer()
+                if let update = updates.available {
+                    Button(updates.isInstalling ? "업데이트 받는 중…" : "v\(update.version) 설치") {
+                        updates.install()
+                    }
+                    .disabled(updates.isInstalling)
+                } else {
+                    Button(updates.isChecking ? "확인 중…" : "지금 확인") {
+                        Task { await updates.check() }
+                    }
+                    .disabled(updates.isChecking)
+                }
+            }
+            Text(updateStatusText)
+                .font(.caption)
+                .foregroundStyle(updates.installFailure == nil ? Color.secondary : Color.red)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var updateStatusText: String {
+        let updates = model.updates
+        if let failure = updates.installFailure { return failure }
+        switch updates.lastResult {
+        case .available:
+            return "새 버전이 나왔습니다. 설치하면 앱이 잠깐 꺼졌다가 새 버전으로 다시 켜집니다."
+        case .upToDate:
+            return "최신 버전입니다. 새 버전은 몇 시간마다 알아서 확인합니다."
+        case .failed:
+            return "새 버전을 확인하지 못했습니다. 인터넷 연결을 확인해 주세요."
+        case nil:
+            return "새 버전은 몇 시간마다 알아서 확인합니다."
+        }
     }
 
     /// 처음 쓰는 사람은 몰라도 되는 설정.

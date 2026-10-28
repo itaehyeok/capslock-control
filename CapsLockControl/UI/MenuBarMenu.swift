@@ -6,6 +6,16 @@ struct MenuBarMenu: View {
 
     var body: some View {
         Text(statusLine)
+        // 창을 잘 열지 않는 메뉴바 앱이라 새 버전은 여기서 제일 먼저 보인다.
+        if let update = model.updates.available {
+            Button(model.updates.isInstalling
+                   ? "업데이트 받는 중…"
+                   : "새 버전 v\(update.version) 설치") { model.updates.install() }
+                .disabled(model.updates.isInstalling)
+            if let failure = model.updates.installFailure {
+                Text("⚠︎ \(failure)")
+            }
+        }
         Divider()
 
         Toggle("Enabled", isOn: Binding(

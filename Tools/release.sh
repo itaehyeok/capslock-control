@@ -1,12 +1,14 @@
 #!/bin/bash
 #
-# 릴리스: 버전 올리기 → Developer ID 서명 → 공증 → 스테이플 → DMG
+# 릴리스: 버전 올리기 → Developer ID 서명 → 공증 → 스테이플 → DMG·업데이트 zip
 #         → 태그·푸시 → GitHub 릴리스에 올리기. 명령 하나로 끝난다.
 #
 # 왜 이게 필요한가
 #   ad-hoc 서명은 빌드할 때마다 서명이 바뀐다. 받는 사람은 Gatekeeper 경고를 뚫어야
 #   하고, 업데이트할 때마다 손쉬운 사용 권한을 다시 줘야 한다. Developer ID 로
 #   서명하고 공증하면 둘 다 사라진다 — 받아서 끌어다 놓으면 끝이다.
+#   GitHub 릴리스에 올리면 이미 깐 앱은 새 버전을 알아서 찾아 업데이트를 권한다
+#   (UpdateCheck.swift 가 RELEASE_REPO 의 최신 릴리스를 본다).
 #
 # 쓰는 법
 #   make release VERSION=0.2.0
@@ -39,7 +41,7 @@ if [ -f Config/Release.local.env ]; then
 fi
 NOTARY_PROFILE="${NOTARY_PROFILE:-CapsLockControl}"
 SKIP_NOTARIZE="${SKIP_NOTARIZE:-0}"
-# 릴리스를 올릴 GitHub 저장소.
+# UpdateCheck.Feed.github 와 같은 저장소여야 깔린 앱이 새 버전을 찾는다.
 RELEASE_REPO="${RELEASE_REPO:-itaehyeok/capslock-control}"
 RELEASE_BRANCH="${RELEASE_BRANCH:-main}"
 
@@ -54,7 +56,7 @@ if [ -z "$VERSION" ]; then
     [ "$PUBLISH" = "1" ] && die "올릴 버전을 주세요." "make release VERSION=0.2.0"
     VERSION=$(sed -n 's/.*MARKETING_VERSION = \([^;]*\);.*/\1/p' "$PROJ/project.pbxproj" | head -1)
 fi
-# 태그를 v0.2.0 처럼 숫자 셋으로 맞춘다. 지난 릴리스와 순서를 견줄 때도 이 꼴을 전제한다.
+# 앱은 숫자 셋인 태그만 새 버전으로 알아본다(UpdateCheck.parse).
 if [ "$PUBLISH" = "1" ] && ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
     die "버전은 0.2.0 처럼 숫자 셋이어야 합니다: $VERSION"
 fi
@@ -72,7 +74,7 @@ if [ "$PUBLISH" = "1" ]; then
         "" "$(git status --short | head -10)"
     git rev-parse -q --verify "refs/tags/$TAG" >/dev/null && die "태그 $TAG 가 이미 있습니다. 버전을 올려 주세요."
 
-    # 지난 릴리스보다 작거나 같은 버전을 올리면 어느 쪽이 최신인지 꼬인다.
+    # 지난 릴리스보다 커야 깔린 앱이 새 버전으로 알아본다.
     # 태그가 하나도 없으면 grep 이 1 로 끝난다. 첫 릴리스라 괜찮다.
     LAST_TAG=$(git tag -l 'v*' | sed 's/^v//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
         | sort -t. -k1,1n -k2,2n -k3,3n | tail -1 || true)
@@ -90,9 +92,9 @@ if [ "$PUBLISH" = "1" ]; then
     fi
     VISIBILITY=$(gh repo view "$RELEASE_REPO" --json visibility -q .visibility 2>/dev/null) \
         || die "$RELEASE_REPO 저장소에 접근하지 못했습니다." "gh auth login 으로 $OWNER 계정에 로그인하세요."
-    # 비공개 저장소의 릴리스 파일은 로그인 없이 못 받는다. 받는 사람이 DMG 를 받지 못한다.
+    # 비공개 저장소의 릴리스는 로그인 없이 못 받는다. 깔린 앱이 새 버전을 찾지 못한다.
     [ "$VISIBILITY" = "PUBLIC" ] || die "$RELEASE_REPO 가 공개 저장소가 아닙니다($VISIBILITY)." \
-        "비공개 저장소의 릴리스 파일은 로그인해야 받을 수 있습니다. 공개로 바꾼 뒤 다시 하세요."
+        "앱의 업데이트 확인은 로그인 없이 묻습니다. 공개로 바꾼 뒤 다시 하세요."
 fi
 
 # ── 서명 인증서 ───────────────────────────────────────────────────────────
@@ -133,8 +135,8 @@ printf '서명: %s\n' "$IDENTITY"
 [ "$SKIP_NOTARIZE" = "1" ] && printf '공증·업로드: 건너뜀 (SKIP_NOTARIZE=1) — 배포용이 아닙니다\n'
 
 # ── 0. 버전 올리기 ────────────────────────────────────────────────────────
-# 저장소의 버전도 같이 올려 둔다. 그래야 다음 개발 빌드도 지금 버전을 단다.
-# 중간에 실패해서 다시 돌려도 두 번 커밋하지 않는다.
+# 저장소의 버전도 같이 올려 둔다. 개발 빌드가 지난 버전을 달고 있으면 앱이 방금 올린
+# 릴리스를 "새 버전" 으로 권한다. 중간에 실패해서 다시 돌려도 두 번 커밋하지 않는다.
 if [ "$PUBLISH" = "1" ]; then
     step "버전을 $VERSION 으로"
     sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $VERSION;/" "$PROJ/project.pbxproj"
@@ -148,6 +150,7 @@ fi
 
 APP="$BUILD/Build/Products/Release/CapsLockControl.app"
 DMG="$DIST/CapsLockControl-$VERSION.dmg"
+# 업데이트용 zip. 이름은 UpdateCheck.assetName 과 같아야 한다.
 ZIP="$DIST/CapsLockControl-$VERSION.zip"
 rm -rf "$DIST"; mkdir -p "$DIST"
 
@@ -175,6 +178,11 @@ SIGNINFO=$(codesign -d --verbose=2 "$APP" 2>&1 || true)
 case "$SIGNINFO" in
     *"flags="*"runtime"*) ;;
     *) die "하드닝 런타임이 꺼져 있습니다. 공증이 거부됩니다." ;;
+esac
+# 깔린 앱은 같은 팀이 서명한 업데이트만 받는다(AppUpdater). 팀이 바뀌면 업데이트가 끊긴다.
+case "$SIGNINFO" in
+    *"TeamIdentifier=$TEAM"*) ;;
+    *) die "서명 팀이 $TEAM 이 아닙니다." ;;
 esac
 
 ENTS=$(codesign -d --entitlements - --xml "$APP" 2>/dev/null | plutil -p - 2>/dev/null || true)
@@ -215,8 +223,12 @@ if [ "$SKIP_NOTARIZE" != "1" ]; then
     step "앱에 티켓 붙이기"
     # 스테이플을 해야 오프라인에서도 Gatekeeper 가 바로 통과시킨다.
     xcrun stapler staple "$APP"
-    rm -f "$ZIP"
 fi
+
+# 티켓을 붙인 앱으로 업데이트용 zip 을 다시 싼다. `zip` 은 심볼릭 링크와 확장
+# 속성을 잃어 서명이 깨진다. ditto 를 쓴다.
+rm -f "$ZIP"
+ditto -c -k --keepParent "$APP" "$ZIP"
 
 # ── 3. DMG ────────────────────────────────────────────────────────────────
 step "DMG 만들기"
@@ -274,9 +286,11 @@ else
         fi
         printf '\n## 설치\n\n'
         printf 'CapsLockControl-%s.dmg 를 열고 앱을 응용 프로그램 폴더로 끌어다 놓으세요.\n' "$VERSION"
+        printf '이미 쓰고 있다면 앱이 새 버전을 알아서 알려 줍니다(메뉴바 › 새 버전 설치).\n'
     } > "$NOTES"
 fi
-gh release create "$TAG" "$DMG" -R "$RELEASE_REPO" --verify-tag \
+gh release create "$TAG" "$ZIP" "$DMG" -R "$RELEASE_REPO" --verify-tag \
     --title "CapsLock Control $TAG" --notes-file "$NOTES"
 
 printf '\n완료: https://github.com/%s/releases/tag/%s\n' "$RELEASE_REPO" "$TAG"
+printf '깔린 앱은 몇 시간 안에(창을 열면 바로) 새 버전을 알려 줍니다.\n'

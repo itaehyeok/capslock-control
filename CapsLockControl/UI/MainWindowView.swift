@@ -16,6 +16,7 @@ struct MainWindowView: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 12) {
                 header
+                if let update = model.updates.available { updateBanner(update) }
                 if !model.isTrusted { permissionBanner }
                 if !model.conflictingApps.isEmpty { conflictBanner }
                 if let error = model.lastError { errorBanner(error) }
@@ -194,6 +195,36 @@ struct MainWindowView: View {
                 Button("다시 확인") { model.refreshConflictingApps() }
             }
             .controlSize(.small)
+        }
+    }
+
+    private func updateBanner(_ update: UpdateCheck.Release) -> some View {
+        banner(tint: .blue, icon: "arrow.down.circle.fill") {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("새 버전 v\(update.version) 이 나왔습니다. 지금은 v\(model.updates.currentVersion) 입니다.")
+                    .font(.callout)
+                Text("업데이트하면 앱이 잠깐 꺼졌다가 새 버전으로 다시 켜집니다.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let failure = model.updates.installFailure {
+                    Text(failure)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                HStack(spacing: 8) {
+                    Button(model.updates.isInstalling
+                           ? "업데이트 받는 중…"
+                           : (model.updates.installFailure == nil ? "지금 업데이트" : "다시 시도")) {
+                        model.updates.install()
+                    }
+                    .disabled(model.updates.isInstalling)
+                    if update.pageURL != nil {
+                        Button("바뀐 내용 보기") { model.updates.openReleasePage() }
+                    }
+                }
+                .controlSize(.small)
+            }
         }
     }
 

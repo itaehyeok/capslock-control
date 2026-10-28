@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installSignalHandlers()
         observeWorkspaceNotifications()
         model.startIfPossible()
+        model.updates.startPeriodicChecks()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -75,12 +76,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         // 백그라운드 데몬은 앱 실행 알림을 주지 않는다. 사용자가 "왜 안 되지" 하고
-        // 앱을 열어 보는 순간이 가장 확실한 갱신 시점이다.
+        // 앱을 열어 보는 순간이 가장 확실한 갱신 시점이다. 새 버전도 이때 한 번 더 본다.
         NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.model.refreshConflictingApps()
+                guard let self else { return }
+                self.model.refreshConflictingApps()
+                Task { await self.model.updates.checkIfDue() }
             }
         }
     }

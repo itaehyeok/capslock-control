@@ -54,6 +54,8 @@ dependencies — Apple frameworks only.
 - **Menu bar only**, no Dock icon. Launches at login via `SMAppService`.
 - No virtual HID driver. Just Apple's own `hidutil` remapping plus a thin `CGEventTap`.
 - **Quitting the app restores the keyboard**, whether by ⌘Q or a forced kill (SIGTERM).
+- **Updates itself.** It checks GitHub Releases every few hours and offers the new
+  version in the menu bar; one click downloads it, swaps the app and relaunches it.
 
 ## Getting started
 
@@ -62,7 +64,7 @@ dependencies — Apple frameworks only.
 Download `CapsLockControl-<version>.dmg` from
 [Releases](https://github.com/itaehyeok/capslock-control/releases/latest), open it,
 and drag the app into Applications. It is signed and notarized, so it opens without
-a warning.
+a warning, and new versions show up in the menu bar on their own.
 
 **Building from source needs Xcode 26 or newer.** Command Line Tools alone will not do.
 
@@ -234,10 +236,10 @@ upload by hand:
 3. builds Release with Hardened Runtime and a secure timestamp,
 4. checks the signature and refuses to continue if `get-task-allow` or the app
    sandbox slipped in — either one gets rejected by the notary service,
-5. notarizes the app and staples the ticket to it,
+5. notarizes the app, staples the ticket to it, and zips it for in-app updates,
 6. packages a DMG with an `/Applications` symlink, signs, notarizes and staples it,
    then verifies it the way the recipient's Mac will,
-7. tags `v<version>`, pushes, and creates the GitHub release with the DMG.
+7. tags `v<version>`, pushes, and creates the GitHub release with the zip and the DMG.
 
 The release notes are the commit subjects since the previous tag unless you pass
 `RELEASE_NOTES_FILE=notes.md`. Values that only fit your Mac — say, a notarization
@@ -255,10 +257,15 @@ and publishes nothing. Do not hand that DMG to anyone — Gatekeeper will block 
   because the Spotify and YouTube Music media shortcuts send Apple Events. It lives in
   `Config/CapsLockControl.entitlements`. Everything else — the event tap, IOKit
   caps-lock state, spawning `hidutil` and `git` — runs untouched under Hardened Runtime.
-- **There is no auto-updater.** Sparkle would be an external dependency and this
-  project has none. Updating means downloading the new DMG.
-- **The repository has to be public.** The release assets of a private repository
-  cannot be downloaded without authentication.
+- **Updates are built in, without Sparkle** (this project has no external
+  dependencies). Every six hours, and when you open the window, the app asks the
+  GitHub API for the latest release, downloads `CapsLockControl-<version>.zip`, and
+  installs it only if the bundle ID, the version and the signing team all match the
+  running app. A helper script swaps the app after it quits and relaunches it,
+  rolling back if the new one fails to open. The repository is written in
+  `UpdateCheck.swift`; if you fork, change it there and in `RELEASE_REPO`.
+- **The repository has to be public.** The update check does not log in, and the
+  release assets of a private repository cannot be downloaded without authentication.
 
 ## Why it works the way it does
 
@@ -652,6 +659,8 @@ CapsLockControl/
     LayerStateMachine.swift  pure state machine for press/release ordering
     EngineOptions.swift      engine behaviour derived from the config
     UnmappedKeyPolicy.swift  what to do with unassigned keys (default: swallow)
+    UpdateCheck.swift        latest GitHub release · version comparison
+    UpdateHelperScript.swift the script that swaps the app after it quits
   Engine/   Where it meets the system
     HIDRemapper.swift        hidutil wrapper + reapply on keyboard hotplug
     EventTapController.swift CGEventTap on a dedicated thread, auto re-enable
@@ -664,7 +673,8 @@ CapsLockControl/
     FrontmostAppTracker.swift remembers the previous app
     GitSync.swift            export / import through system git
     DefaultConfiguration.swift the empty first-run configuration
-  App/      SwiftUI entry point · AppDelegate · EngineModel · SyncController
+    AppUpdater.swift         download · verify (bundle ID, version, team) · stage the update
+  App/      SwiftUI entry point · AppDelegate · EngineModel · SyncController · UpdateController
   UI/       Keyboard editor, pickers, settings, menu bar
 ```
 
@@ -761,6 +771,8 @@ framework 만 쓴다.
 - 가상 HID 드라이버를 만들지 않는다. Apple 이 제공하는 `hidutil` 리맵 +
   얇은 `CGEventTap` 조합이다.
 - **앱을 종료하면 키보드가 원래대로 돌아간다.** ⌘Q 든 강제 종료(SIGTERM)든.
+- **스스로 업데이트한다.** 몇 시간마다 GitHub 릴리스를 확인해 새 버전을 메뉴바에
+  띄우고, 누르면 받아서 앱을 바꿔 끼운 뒤 다시 켠다.
 
 ## 처음 쓰는 사람
 
@@ -768,7 +780,7 @@ framework 만 쓴다.
 
 [Releases](https://github.com/itaehyeok/capslock-control/releases/latest) 에서
 `CapsLockControl-<버전>.dmg` 를 받아 열고, 앱을 응용 프로그램 폴더로 끌어다 놓는다.
-서명·공증돼 있어 경고 없이 열린다.
+서명·공증돼 있어 경고 없이 열리고, 새 버전은 메뉴바에 알아서 뜬다.
 
 **소스에서 빌드하려면 Xcode 26 이상이 필요하다.** Command Line Tools 만으로는 안 된다.
 
@@ -933,10 +945,10 @@ make release VERSION=0.2.0
 3. 하드닝 런타임과 보안 타임스탬프를 켜고 Release 빌드
 4. 서명을 확인하고, `get-task-allow` 나 샌드박스가 끼어들었으면 중단
    — 둘 중 하나만 있어도 공증이 거부된다
-5. 앱을 공증하고 티켓을 앱에 붙인다(staple)
+5. 앱을 공증하고 티켓을 붙인(staple) 뒤 앱 안 업데이트용 zip 으로 싼다
 6. `/Applications` 심볼릭 링크를 넣은 DMG 를 만들어 서명·공증·스테이플하고,
    받는 사람의 Mac 이 하는 것과 같은 검사로 확인
-7. `v<버전>` 태그를 달고 푸시한 뒤, DMG 를 붙여 GitHub 릴리스를 만든다
+7. `v<버전>` 태그를 달고 푸시한 뒤, zip 과 DMG 를 붙여 GitHub 릴리스를 만든다
 
 릴리스 설명은 `RELEASE_NOTES_FILE=notes.md` 를 주지 않으면 지난 태그 뒤의 커밋
 제목으로 만든다. 공증 프로필을 다른 이름으로 저장해 둔 것처럼 이 맥에만 맞는 값은
@@ -954,9 +966,14 @@ make release VERSION=0.2.0
   Event 를 보내므로 `com.apple.security.automation.apple-events` 를 붙인다.
   `Config/CapsLockControl.entitlements` 에 있다. 나머지 — 이벤트탭, IOKit Caps
   Lock 상태, `hidutil` 과 `git` 실행 — 는 하드닝 런타임에서 그대로 동작한다.
-- **자동 업데이트는 없다.** Sparkle 은 외부 의존성이고 이 프로젝트에는 외부
-  의존성이 없다. 업데이트는 새 DMG 를 받는 것이다.
-- **저장소는 공개여야 한다.** 비공개 저장소의 릴리스 파일은 인증 없이 받을 수 없다.
+- **업데이트는 Sparkle 없이 직접 한다**(이 프로젝트에는 외부 의존성이 없다).
+  6시간마다, 그리고 창을 열 때 GitHub API 에 최신 릴리스를 묻고,
+  `CapsLockControl-<버전>.zip` 을 받아 번들 ID·버전·서명 팀이 지금 앱과 모두 같을
+  때만 설치한다. 앱이 꺼진 뒤 도우미 스크립트가 바꿔 끼우고 다시 켜며, 새 앱이 안
+  열리면 있던 앱으로 되돌린다. 저장소 주소는 `UpdateCheck.swift` 에 적혀 있다.
+  포크하면 거기와 `RELEASE_REPO` 를 같이 바꾼다.
+- **저장소는 공개여야 한다.** 업데이트 확인은 로그인하지 않고, 비공개 저장소의
+  릴리스 파일은 인증 없이 받을 수 없다.
 
 ## 왜 이렇게 만들었나
 
@@ -1334,6 +1351,8 @@ CapsLockControl/
     LayerStateMachine.swift  눌림·뗌 순서를 다루는 순수 상태 기계
     EngineOptions.swift      설정에서 뽑아낸 엔진 동작 방식
     UnmappedKeyPolicy.swift  등록되지 않은 키 정책 (기본: 삼킴)
+    UpdateCheck.swift        GitHub 최신 릴리스 조회 · 버전 비교
+    UpdateHelperScript.swift 앱이 꺼진 뒤 앱을 바꿔 끼우는 스크립트
   Engine/   시스템과 맞닿는 부분
     HIDRemapper.swift        hidutil 래핑 + 키보드 핫플러그 재적용
     EventTapController.swift 전용 스레드 위의 CGEventTap, 꺼지면 자동 재활성화
@@ -1346,7 +1365,8 @@ CapsLockControl/
     FrontmostAppTracker.swift 직전 앱 기록
     GitSync.swift            시스템 git 으로 export / import
     DefaultConfiguration.swift 첫 실행 시의 빈 설정
-  App/      SwiftUI 진입점 · AppDelegate · EngineModel · SyncController
+    AppUpdater.swift         내려받기 · 검증(번들 ID·버전·팀) · 업데이트 놓아 두기
+  App/      SwiftUI 진입점 · AppDelegate · EngineModel · SyncController · UpdateController
   UI/       키보드 에디터, 피커, 설정, 메뉴바
 ```
 

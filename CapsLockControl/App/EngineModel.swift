@@ -60,6 +60,9 @@ final class EngineModel {
         return controller
     }()
 
+    /// 새 버전 확인과 설치.
+    @ObservationIgnored let updates = UpdateController()
+
     @ObservationIgnored private lazy var engine = KeyboardEngine(
         observer: { [weak self] event in
             Task { @MainActor in self?.handle(event) }
