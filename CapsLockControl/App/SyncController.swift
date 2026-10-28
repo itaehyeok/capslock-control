@@ -165,21 +165,10 @@ final class SyncController {
     }
 
     /// 고른 항목만 지금 설정에 반영한다. GitHub 에는 아무것도 올리지 않는다.
-    ///
-    /// 되돌릴 수 없는 변경이므로 **적용 전에 항상 로컬 백업을 남긴다.**
-    /// 네트워크와 무관하게 성공해야 하는 안전망이라 파일로 쓴다.
+    /// 로컬 백업은 `EngineModel.importItems` 가 적용 전에 항상 남긴다.
     func importItems(_ items: [ConfigDiff.Item], selecting selectedIDs: Set<String>) {
-        guard let owner, !selectedIDs.isEmpty else { return }
-        let updated = ConfigDiff.apply(items, selecting: selectedIDs, to: owner.config)
-        guard updated != owner.config else { return }
-
-        lastBackupURL = owner.backUpCurrentConfig(reason: "before-import")
-        owner.saveConfig(updated)
-        var message = "Import 완료 — \(selectedIDs.count)개 항목을 가져왔습니다"
-        if let name = lastBackupURL?.lastPathComponent {
-            message += " (백업 \(name))"
-        }
-        owner.note(message)
+        guard let owner else { return }
+        lastBackupURL = owner.importItems(items, selecting: selectedIDs, logPrefix: "Import 완료")
         state = .idle
     }
 

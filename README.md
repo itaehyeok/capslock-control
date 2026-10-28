@@ -44,6 +44,9 @@ dependencies — Apple frameworks only.
   **picked up immediately, no restart**.
 - Writes are atomic. A corrupted file is backed up rather than deleted, and the
   app starts from defaults.
+- **Back up to a file** — Settings › General › 백업 saves everything as one JSON
+  file. Importing a file shows what would change and lets you **check off items**,
+  so moving to another Mac needs nothing but that file.
 - **Sync between Macs through GitHub** — Export pushes a new snapshot stamped with
   the time and the Mac's name (nothing is ever deleted); Import lets you pick one
   and **check off individual items** to pull in. A local backup is always written first.
@@ -165,6 +168,8 @@ A reboot also clears it. **The keyboard can never get locked** — the worst cas
 that Caps Lock does nothing.
 
 **GitHub sync is optional.** With a single Mac you never need to set it up.
+For a backup or a move to another Mac, the file export and import under
+Settings › General › 백업 are enough.
 
 ## Requirements
 
@@ -569,6 +574,20 @@ Opens the app picker without click automation. DEBUG builds only.
 open build/Build/Products/Debug/CapsLockControl.app --args -openPicker q
 ```
 
+## Backing up to a file
+
+Settings › General › 백업 has two buttons. Neither needs an account or git.
+
+| Button | What it does |
+|---|---|
+| **파일로 내보내기...** | Saves the current configuration as one JSON file. The format is the same as `shortcuts.json` |
+| **파일에서 가져오기...** | Opens such a file, shows what would change, and applies only the **items you check** |
+
+The import screen is the same one GitHub Import uses. Before applying, the current
+configuration is always written to the backups folder. A JSON file that is not a
+configuration (no `layers`) is refused rather than read as an empty one, and so is a
+file from a newer version of the app.
+
 ## GitHub sync — Export / Import
 
 Two Macs share one configuration. Put the repository address in Settings › Advanced › GitHub 동기화.
@@ -656,6 +675,7 @@ CapsLockControl/
     AppConfiguration.swift   on-disk schema + version/migration
     ConfigStore.swift        atomic writes · corrupt-file backup · folder watching
     ConfigDiff.swift         item-level comparison for Import
+    ConfigFile.swift         file export / import format and checks
     LayerStateMachine.swift  pure state machine for press/release ordering
     EngineOptions.swift      engine behaviour derived from the config
     UnmappedKeyPolicy.swift  what to do with unassigned keys (default: swallow)
@@ -760,6 +780,9 @@ framework 만 쓴다.
 
 - 설정은 사람이 읽고 고칠 수 있는 **JSON** 이다. 직접 고치면 **재시작 없이 바로 반영**된다.
 - 저장은 atomic. 파일이 깨져 있으면 지우지 않고 백업한 뒤 기본값으로 시작한다.
+- **파일로 백업** — 설정 › 일반 › 백업에서 전부를 JSON 파일 하나로 저장한다.
+  파일에서 가져올 때는 무엇이 달라지는지 보여 주고 **항목을 골라** 바꾼다.
+  다른 Mac 으로 옮길 때도 그 파일 하나면 된다.
 - **GitHub 로 Mac 사이 동기화** — Export 는 시각과 Mac 이름이 붙은 새 스냅샷을 쌓고
   (기존 것을 지우지 않는다), Import 는 그중 하나를 골라 **항목별로 체크해서** 가져온다.
   가져오기 전에 로컬 백업이 항상 남는다.
@@ -875,6 +898,7 @@ make reset-hid     # 또는 hidutil property --set '{"UserKeyMapping":[]}'
 최악의 경우 Caps Lock 이 아무 일도 안 하는 상태가 될 뿐이다.
 
 **GitHub 동기화는 선택 사항이다.** Mac 이 하나면 설정하지 않아도 된다.
+백업이나 Mac 옮기기는 설정 › 일반 › 백업의 파일 내보내기·가져오기로 충분하다.
 
 ## 요구 사항
 
@@ -1267,6 +1291,19 @@ Safari 으로 교체할까요?              [취소] [교체]
 open build/Build/Products/Debug/CapsLockControl.app --args -openPicker q
 ```
 
+## 파일로 백업하기
+
+설정 › 일반 › 백업에 버튼이 두 개 있다. 계정이나 git 이 필요 없다.
+
+| 버튼 | 하는 일 |
+|---|---|
+| **파일로 내보내기...** | 지금 설정을 JSON 파일 하나로 저장한다. 형식은 `shortcuts.json` 과 같다 |
+| **파일에서 가져오기...** | 그 파일을 열어 무엇이 달라지는지 보여 주고, **체크한 항목만** 바꾼다 |
+
+가져오기 화면은 GitHub Import 와 같은 화면이다. 적용 전에 지금 설정이 백업 폴더에
+항상 남는다. 설정 파일이 아닌 JSON(`layers` 가 없음)은 빈 설정으로 읽지 않고 거절하며,
+더 새 버전의 앱에서 만든 파일도 가져오지 않는다.
+
 ## GitHub 설정 동기화 — Export / Import
 
 집 Mac 과 회사 Mac 이 같은 설정을 쓴다. 설정 › 고급 › GitHub 동기화에 저장소 주소를 넣고 쓴다.
@@ -1348,6 +1385,7 @@ CapsLockControl/
     AppConfiguration.swift   디스크 스키마 + version/migration
     ConfigStore.swift        atomic 저장 · 손상 파일 백업 · 폴더 감시
     ConfigDiff.swift         Import 용 항목 단위 비교
+    ConfigFile.swift         파일 내보내기·가져오기 형식과 검사
     LayerStateMachine.swift  눌림·뗌 순서를 다루는 순수 상태 기계
     EngineOptions.swift      설정에서 뽑아낸 엔진 동작 방식
     UnmappedKeyPolicy.swift  등록되지 않은 키 정책 (기본: 삼킴)

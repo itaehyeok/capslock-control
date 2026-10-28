@@ -32,3 +32,41 @@ struct ConfigFileTests {
         #expect(ConfigFile.suggestedName(for: date) == "CapsLock Control 단축키 2026-10-28.json")
     }
 }
+
+@Suite("설정 파일 가져오기")
+struct ConfigFileReadTests {
+
+    private func data(_ json: String) -> Data { Data(json.utf8) }
+
+    @Test("내보낸 파일은 그대로 읽힌다")
+    func readsExportedFile() throws {
+        var config = CapsLockControlConfig()
+        config.setAction(.application(ApplicationTarget(bundleIdentifier: "com.apple.Safari",
+                                                        displayName: "Safari")),
+                         layer: .capsLock, keyIdentifier: "s")
+        #expect(try ConfigFile.decode(ConfigFile.encode(config)) == config)
+    }
+
+    @Test("손으로 만든 파일은 layers 만 있어도 읽힌다")
+    func readsMinimalFile() throws {
+        let config = try ConfigFile.decode(data(#"{"layers": {}}"#))
+        #expect(config.layers.isEmpty)
+    }
+
+    @Test("설정 파일이 아니면 빈 설정으로 읽지 않는다",
+          arguments: ["{}", #"{"name": "package"}"#, "[1, 2]", "not json", #"{"layers": []}"#])
+    func rejectsOtherFiles(_ json: String) {
+        #expect(throws: ConfigFile.ReadError.notConfiguration) {
+            try ConfigFile.decode(data(json))
+        }
+    }
+
+    @Test("더 새 버전에서 만든 파일은 가져오지 않는다")
+    func rejectsNewerVersion() {
+        let newer = CapsLockControlConfig.currentVersion + 1
+        #expect(throws: ConfigFile.ReadError.newerVersion(
+            found: newer, supported: CapsLockControlConfig.currentVersion)) {
+            try ConfigFile.decode(data(#"{"version": \#(newer), "layers": {}}"#))
+        }
+    }
+}

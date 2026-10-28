@@ -138,6 +138,30 @@ final class EngineModel {
         appendLog("파일로 내보냈습니다 — \(url.lastPathComponent)")
     }
 
+    /// 가져온 설정에서 고른 항목만 지금 설정에 반영한다.
+    ///
+    /// 되돌릴 수 없는 변경이므로 **적용 전에 항상 로컬 백업을 남긴다.**
+    /// - Returns: 남긴 백업 파일. 바뀐 게 없거나 백업을 못 만들었으면 nil.
+    @discardableResult
+    func importItems(
+        _ items: [ConfigDiff.Item],
+        selecting selectedIDs: Set<String>,
+        logPrefix: String
+    ) -> URL? {
+        guard !selectedIDs.isEmpty else { return nil }
+        let updated = ConfigDiff.apply(items, selecting: selectedIDs, to: config)
+        guard updated != config else { return nil }
+
+        let backup = backUpCurrentConfig(reason: "before-import")
+        saveConfig(updated)
+        var message = "\(logPrefix) — \(selectedIDs.count)개 항목을 가져왔습니다"
+        if let name = backup?.lastPathComponent {
+            message += " (백업 \(name))"
+        }
+        appendLog(message)
+        return backup
+    }
+
     /// 설정 파일이 읽기 전용이면 GUI 편집을 막는다.
     var isEditable: Bool { !isConfigReadOnly }
 

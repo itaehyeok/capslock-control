@@ -11,6 +11,8 @@ struct SettingsView: View {
     @State private var tapTimeoutDraft: Double?
     /// 파일로 내보내거나 가져온 결과. 저장 창은 닫히고 나면 아무것도 남기지 않아서 여기서 알려 준다.
     @State private var fileResult: FileResult?
+    /// 열어 둔 파일. 있으면 가져오기 화면을 띄운다.
+    @State private var importedFile: ImportedConfigFile?
 
     private struct FileResult {
         var text: String
@@ -39,6 +41,14 @@ struct SettingsView: View {
             set: { model.sync.isImportSheetPresented = $0 }
         )) {
             SnapshotImportView(model: model) { model.sync.isImportSheetPresented = false }
+        }
+        .sheet(item: $importedFile) { file in
+            FileImportView(model: model, file: file) { importedCount in
+                importedFile = nil
+                if let importedCount {
+                    fileResult = FileResult(text: "\(importedCount)개 항목을 가져왔습니다.", isFailure: false)
+                }
+            }
         }
     }
 
@@ -202,6 +212,8 @@ struct SettingsView: View {
     private var backupSection: some View {
         HStack {
             Button("파일로 내보내기...") { exportToFile() }
+            Button("파일에서 가져오기...") { importFromFile() }
+                .disabled(!model.isEditable)
             Spacer()
         }
         if let fileResult {
@@ -210,8 +222,10 @@ struct SettingsView: View {
                 .foregroundStyle(fileResult.isFailure ? Color.red : Color.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        Text("지금 단축키와 설정을 JSON 파일 하나로 저장합니다.")
+        Text("지금 단축키와 설정을 JSON 파일 하나로 저장합니다. 가져올 때는 무엇이 달라지는지 "
+             + "보여 주고 고른 항목만 바꿉니다. 다른 Mac 으로 옮길 때도 이 파일을 쓰면 됩니다.")
             .font(.caption).foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private func exportToFile() {
@@ -226,6 +240,21 @@ struct SettingsView: View {
         } catch {
             fileResult = FileResult(text: "내보내지 못했습니다: \(error.localizedDescription)",
                                     isFailure: true)
+        }
+    }
+
+    private func importFromFile() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let incoming = try ConfigFile.decode(Data(contentsOf: url))
+            importedFile = ImportedConfigFile(
+                url: url, items: ConfigDiff.items(current: model.config, incoming: incoming))
+        } catch {
+            fileResult = FileResult(text: "\(url.lastPathComponent) 을 읽지 못했습니다: "
+                                    + error.localizedDescription, isFailure: true)
         }
     }
 
