@@ -85,6 +85,15 @@ You do not need an Apple Developer account (it falls back to ad-hoc signing).
 > **macOS stops re-asking for Accessibility permission.** Ad-hoc signatures change
 > on every build, so the prompt can come back.
 
+> **Already running the released app?** It is signed with a Developer ID, and the
+> Accessibility grant belongs to that signature. Covering it with a development
+> build would leave the checkbox on while macOS treats the app as a stranger, and
+> every shortcut would stop. So `make install` refuses in that case. If you hold a
+> Developer ID certificate, put it in `Config/Release.local.env`
+> (`DEVELOPER_ID="Developer ID Application: Name (TEAMID)"`) and `make install`
+> signs a Release build with it, keeping the grant. Otherwise `FORCE=1 make install`
+> goes ahead, and you re-grant the permission afterwards.
+
 ### 2. Grant permission
 
 On first launch a window appears and asks for Accessibility permission.
@@ -249,7 +258,9 @@ upload by hand:
 The release notes are the commit subjects since the previous tag unless you pass
 `RELEASE_NOTES_FILE=notes.md`. Values that only fit your Mac — say, a notarization
 profile stored under another name — go in `Config/Release.local.env`
-(`NOTARY_PROFILE=<name>`), which is not committed.
+(`NOTARY_PROFILE=<name>`), which is not committed. `DEVELOPER_ID=` there pins the
+certificate instead of taking the first Developer ID in the keychain, and
+`make install` signs with it too.
 
 `SKIP_NOTARIZE=1 make release` does a local dry run: it builds into `dist.noindex/`
 and publishes nothing. Do not hand that DMG to anyone — Gatekeeper will block it.
@@ -821,6 +832,14 @@ Apple 개발자 계정이 없어도 된다(ad-hoc 서명).
 > **손쉬운 사용 권한을 다시 묻지 않는다.** ad-hoc 은 빌드할 때마다 서명이 달라져서
 > 권한을 다시 물어볼 수 있다.
 
+> **공개 릴리스를 이미 깔아 쓰고 있다면** 그 앱은 Developer ID 로 서명돼 있고,
+> 손쉬운 사용 권한도 그 서명에 묶여 있다. 개발 빌드로 덮으면 목록에는 켜져 있는데
+> macOS 가 다른 앱으로 봐서 단축키가 전부 멈춘다. 그래서 이때 `make install` 은 멈춘다.
+> Developer ID 인증서가 있으면 `Config/Release.local.env` 에
+> `DEVELOPER_ID="Developer ID Application: 이름 (팀ID)"` 를 적자. `make install` 이
+> 그 인증서로 Release 를 서명해 깔아서 권한이 그대로 이어진다. 인증서가 없으면
+> `FORCE=1 make install` 로 덮고 권한을 다시 켜면 된다.
+
 ### 2. 권한 허용
 
 첫 실행이면 창이 뜨고 손쉬운 사용 권한을 요청한다.
@@ -977,6 +996,8 @@ make release VERSION=0.2.0
 릴리스 설명은 `RELEASE_NOTES_FILE=notes.md` 를 주지 않으면 지난 태그 뒤의 커밋
 제목으로 만든다. 공증 프로필을 다른 이름으로 저장해 둔 것처럼 이 맥에만 맞는 값은
 `Config/Release.local.env`(`NOTARY_PROFILE=<이름>`)에 적는다. 저장소에는 올라가지 않는다.
+거기 `DEVELOPER_ID=` 를 적으면 키체인의 첫 Developer ID 를 집는 대신 그 인증서로 고정되고,
+`make install` 도 같은 인증서로 서명한다.
 
 `SKIP_NOTARIZE=1 make release` 는 로컬 점검용이다. `dist.noindex/` 에 빌드만 하고
 아무것도 올리지 않는다. 그렇게 만든 DMG 는 남에게 주면 안 된다 — Gatekeeper 가 막는다.

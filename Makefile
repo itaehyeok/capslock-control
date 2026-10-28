@@ -28,11 +28,9 @@ stop:
 
 # 로그인 시 자동 실행을 쓰려면 반드시 이 위치에서 실행해야 한다.
 # SMAppService 는 등록 시점의 앱 경로를 기억하기 때문이다.
-install: build stop
-	@rm -rf /Applications/CapsLockControl.app
-	@cp -R $(APP) /Applications/
-	@echo "설치 완료: /Applications/CapsLockControl.app"
-	@open /Applications/CapsLockControl.app
+# 서명은 스크립트가 고른다. 공개 릴리스를 깐 Mac 에서 권한이 끊기지 않게 하려는 것이다.
+install:
+	@./Tools/install.sh
 
 # 앱이 비정상 종료되어 Caps Lock 등이 먹통일 때 수동 복구용.
 # 아이콘을 코드로 그린다. 디자인을 바꾸려면 Tools/make-icon.swift 를 고친다.
