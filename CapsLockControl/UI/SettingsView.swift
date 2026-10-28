@@ -61,7 +61,18 @@ struct SettingsView: View {
                      + "안에 떼면 원래 Caps Lock 기능이 동작합니다. "
                      + "시간은 설정 파일의 layerTapTimeoutMilliseconds 로 조절합니다.")
                     .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .disabled(!model.isEditable)
+    }
 
+    /// 처음 쓰는 사람은 몰라도 되는 설정.
+    /// 다른 키를 바꾸는 설정은 모르고 켜면 평소 쓰던 키가 사라지므로 전부 꺼진 채로 시작한다.
+    private var advancedTab: some View {
+        Form {
+            // 기본값 "무시하기" 가 안전해서 대부분 바꿀 일이 없다.
+            Section("레이어 세부 동작") {
                 Picker("등록되지 않은 키", selection: Binding(
                     get: { model.config.defaults.unmappedKeyPolicy },
                     set: { model.setUnmappedKeyPolicy($0) }
@@ -74,24 +85,6 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
-            Section("설정 파일") {
-                Text(model.configFileURL.path)
-                    .font(.caption).monospaced().textSelection(.enabled)
-                    .foregroundStyle(.secondary)
-                HStack {
-                    Button("Finder 에서 보기") { model.revealConfigInFinder() }
-                    Button("다시 불러오기") { model.reloadConfig() }
-                }
-            }
-        }
-        .formStyle(.grouped)
-        .disabled(!model.isEditable)
-    }
-
-    /// 처음 쓰는 사람은 몰라도 되는 설정.
-    /// 다른 키를 바꾸는 설정은 모르고 켜면 평소 쓰던 키가 사라지므로 전부 꺼진 채로 시작한다.
-    private var advancedTab: some View {
-        Form {
             Section {
                 Toggle("fn 과 왼쪽 Control 맞바꾸기", isOn: Binding(
                     get: { model.config.modifiers.swapFnAndLeftControl },
@@ -126,6 +119,17 @@ struct SettingsView: View {
 
             // SSH 키와 git 저장소가 있어야 쓸 수 있다. Mac 이 하나면 필요 없다.
             Section("GitHub 동기화") { syncSection }
+
+            // JSON 을 손으로 고치는 사람만 쓴다.
+            Section("설정 파일") {
+                Text(model.configFileURL.path)
+                    .font(.caption).monospaced().textSelection(.enabled)
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Button("Finder 에서 보기") { model.revealConfigInFinder() }
+                    Button("다시 불러오기") { model.reloadConfig() }
+                }
+            }
         }
         .formStyle(.grouped)
         .disabled(!model.isEditable)

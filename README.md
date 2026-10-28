@@ -17,7 +17,7 @@ dependencies — Apple frameworks only.
 - Advanced, off by default: **Right Command → F18** for input-source switching
   (uses the macOS shortcut) and **swap fn ↔ Left Control**.
 - Unassigned keys are swallowed so **no stray characters get typed**.
-  The policy is configurable.
+  The policy can be changed in Settings › Advanced.
 
 **What a shortcut can do**
 
@@ -716,7 +716,7 @@ framework 만 쓴다.
   조합해서 쓰면 레이어, 톡 치면 Caps Lock.
 - 고급 설정(기본은 꺼짐): **Right Command → F18** 로 한/영 전환(macOS 입력 소스
   단축키를 그대로 쓴다), **fn ↔ 왼쪽 Control 맞바꾸기**.
-- 등록하지 않은 키는 삼켜서 **엉뚱한 글자가 입력되지 않는다**. 정책은 설정으로 바꾼다.
+- 등록하지 않은 키는 삼켜서 **엉뚱한 글자가 입력되지 않는다**. 정책은 설정 › 고급 에서 바꾼다.
 
 **단축키로 할 수 있는 일**
 
