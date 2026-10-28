@@ -74,8 +74,6 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
-            Section("미디어 키") { mediaSection }
-
             Section("동기화") { syncSection }
 
             Section("설정 파일") {
@@ -92,8 +90,8 @@ struct SettingsView: View {
         .disabled(!model.isEditable)
     }
 
-    /// Caps Lock 말고 다른 키를 바꾸는 설정. 전부 꺼진 채로 시작한다.
-    /// 모르고 켜면 평소 쓰던 키가 사라지므로 일반 탭과 떼어 둔다.
+    /// 처음 쓰는 사람은 몰라도 되는 설정.
+    /// 다른 키를 바꾸는 설정은 모르고 켜면 평소 쓰던 키가 사라지므로 전부 꺼진 채로 시작한다.
     private var advancedTab: some View {
         Form {
             Section {
@@ -123,6 +121,10 @@ struct SettingsView: View {
                 Text("Caps Lock 말고 다른 키의 동작을 바꿉니다. 필요할 때만 켜세요.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+
+            // 기본값 "시스템 전체" 면 하드웨어 미디어 키와 같아서 대부분 바꿀 일이 없다.
+            // Spotify·YouTube Music 전용은 자동화 권한이나 Chrome 설정이 따로 필요하다.
+            Section("미디어 키") { mediaSection }
         }
         .formStyle(.grouped)
         .disabled(!model.isEditable)

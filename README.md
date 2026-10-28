@@ -459,7 +459,7 @@ Both places to change it:
 
 - **One shortcut** — select the key in Key Layout, then use the *보낼 곳* picker.
   A button below it offers to move the remaining media shortcuts along with it.
-- **New shortcuts** — Settings › 미디어 키 sets the target for shortcuts you
+- **New shortcuts** — Settings › Advanced › 미디어 키 sets the target for shortcuts you
   create from then on, and warns when existing ones still point elsewhere.
 
 No private frameworks such as MediaRemote are used.
@@ -1142,7 +1142,7 @@ Chrome 이 꺼져 있거나 YouTube Music 탭이 없으면 탭을 열지 않고 
 
 - **단축키 하나** — Key Layout 에서 키를 고르고 *보낼 곳* 선택기를 쓴다.
   그 아래에 나머지 미디어 단축키도 같이 옮길지 묻는 버튼이 나온다.
-- **새로 만들 것** — 설정 › 미디어 키 에서 앞으로 만드는 단축키의 대상을 정한다.
+- **새로 만들 것** — 설정 › 고급 › 미디어 키 에서 앞으로 만드는 단축키의 대상을 정한다.
   이미 만든 것이 다른 곳을 보고 있으면 경고하고 한 번에 옮겨 준다.
 
 MediaRemote 같은 private framework 는 쓰지 않는다.
