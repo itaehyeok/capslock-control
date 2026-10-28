@@ -2,20 +2,27 @@ import Foundation
 
 /// 새 버전이 나왔는지 GitHub 릴리스에 묻는다.
 ///
-/// 공개 저장소라 로그인 없이 묻는다. 로그인 없는 조회는 IP 하나당 시간당 60번까지인데,
-/// 몇 시간에 한 번 묻는 이 앱에는 넉넉하다.
+/// 공개 저장소라 로그인 없이 묻는다. 먼저 API 에 묻고, 안 되면 웹 주소로 묻는다.
+/// 로그인 없는 API 조회는 IP 하나당 시간당 60번이라, 회사처럼 IP 하나를 여럿이 쓰면
+/// 남이 다 써 버려 403 이 온다. 웹 주소(`github.com/…/releases/latest`)는 이 한도가 없다.
 enum UpdateCheck {
 
     /// 릴리스를 어디서 묻고 어디서 받는가. 시험할 때만 다른 곳을 넣는다.
     struct Feed: Sendable {
         /// 최신 릴리스 하나를 돌려주는 주소(GitHub `…/releases/latest`).
         let latestAddress: String
+        /// API 를 못 쓸 때 묻는 웹 주소. 최신 릴리스의 태그 페이지로 넘겨 준다.
+        let webLatestAddress: String
+        /// 웹 주소가 넘겨 줘야 하는 태그 페이지 주소의 앞부분. 다른 곳으로 넘어가면 믿지 않는다.
+        let tagPagePrefix: String
         /// 받아도 되는 파일 주소의 앞부분. 릴리스 정보가 엉뚱한 곳을 가리키면 받지 않는다.
         let downloadPrefix: String
 
         /// `Tools/release.sh` 의 `RELEASE_REPO` 와 같은 저장소여야 한다.
         static let github = Feed(
             latestAddress: "https://api.github.com/repos/itaehyeok/capslock-control/releases/latest",
+            webLatestAddress: "https://github.com/itaehyeok/capslock-control/releases/latest",
+            tagPagePrefix: "https://github.com/itaehyeok/capslock-control/releases/tag/",
             downloadPrefix: "https://github.com/itaehyeok/capslock-control/releases/download/")
     }
 
@@ -39,12 +46,56 @@ enum UpdateCheck {
     /// 최신 릴리스. 못 받으면 nil — 조용히 넘어간다.
     /// 업데이트 확인은 거드는 기능이라, 실패했다고 경고를 띄우면 정작 봐야 할 경고를 가린다.
     static func latest(feed: Feed = .github, session: URLSession = .shared) async -> Release? {
-        guard let url = URL(string: feed.latestAddress) else { return nil }
+        if let url = URL(string: feed.latestAddress) {
+            var request = URLRequest(url: url, timeoutInterval: 15)
+            request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+            if let (data, response) = try? await session.data(for: request),
+               (response as? HTTPURLResponse)?.statusCode == 200 {
+                return parse(data, feed: feed)
+            }
+        }
+        return await latestFromWeb(feed: feed, session: session)
+    }
+
+    /// API 대신 웹 주소로 묻는다. 웹 주소는 태그만 알려 주고 파일 목록은 주지 않는다.
+    /// 그래서 zip 주소는 규칙대로 만들고, 거기 실제로 파일이 있을 때만 설치할 수 있게 둔다.
+    private static func latestFromWeb(feed: Feed, session: URLSession) async -> Release? {
+        guard let url = URL(string: feed.webLatestAddress),
+              let landed = await head(url, session: session), landed.status == 200,
+              let release = release(fromTagPage: landed.url, feed: feed) else { return nil }
+        guard let asset = release.assetURL,
+              await head(asset, session: session)?.status == 200 else {
+            return Release(version: release.version, pageURL: release.pageURL, assetURL: nil)
+        }
+        return release
+    }
+
+    /// HEAD 로 묻고 넘겨 주는 대로 따라간 뒤, 마지막으로 닿은 주소와 상태를 돌려준다.
+    private static func head(_ url: URL, session: URLSession) async -> (url: URL, status: Int)? {
         var request = URLRequest(url: url, timeoutInterval: 15)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        guard let (data, response) = try? await session.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-        return parse(data, feed: feed)
+        request.httpMethod = "HEAD"
+        guard let (_, response) = try? await session.data(for: request),
+              let http = response as? HTTPURLResponse,
+              let landed = http.url else { return nil }
+        return (landed, http.statusCode)
+    }
+
+    /// 웹 주소가 넘겨 준 태그 페이지(`…/releases/tag/v0.2.0`)에서 버전을 읽는다.
+    /// 이 저장소의 태그 페이지가 아니면 없는 것으로 본다.
+    static func release(fromTagPage url: URL, feed: Feed = .github) -> Release? {
+        let address = url.absoluteString
+        guard address.hasPrefix(feed.tagPagePrefix) else { return nil }
+        let tag = String(address.dropFirst(feed.tagPagePrefix.count))
+        guard let version = version(fromTag: tag) else { return nil }
+        let asset = feed.downloadPrefix + "\(tag)/\(assetName(version: version))"
+        return Release(version: version, pageURL: url, assetURL: URL(string: asset))
+    }
+
+    /// 태그에서 `v` 를 뗀 버전. 숫자 셋이 아니면 nil.
+    private static func version(fromTag tag: String) -> String? {
+        let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+        guard version.range(of: #"^\d+\.\d+\.\d+$"#, options: .regularExpression) != nil else { return nil }
+        return version
     }
 
     /// GitHub 릴리스 JSON 을 읽는다. 초안·시험판·버전 꼴이 아닌 태그는 없는 것으로 본다.
@@ -64,9 +115,8 @@ enum UpdateCheck {
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         guard let payload = try? decoder.decode(Payload.self, from: data),
               payload.draft != true, payload.prerelease != true,
-              let tag = payload.tagName else { return nil }
-        let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
-        guard version.range(of: #"^\d+\.\d+\.\d+$"#, options: .regularExpression) != nil else { return nil }
+              let tag = payload.tagName,
+              let version = version(fromTag: tag) else { return nil }
 
         // 이름만 맞으면 받지 않는다. 이 저장소의 이 태그에 올린 파일이어야 한다.
         let name = assetName(version: version)
