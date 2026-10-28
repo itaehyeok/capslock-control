@@ -49,6 +49,8 @@ struct MenuBarMenu: View {
             .keyboardShortcut(",")
 
         Divider()
+        // 새 버전이 있으면 맨 위에 설치 항목이 뜬다. 없을 때 지금 버전이 최신인지 여기서 본다.
+        Text("CapsLock Control v\(model.updates.currentVersion)")
         Button("Quit CapsLock Control") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
     }
