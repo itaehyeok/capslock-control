@@ -97,13 +97,17 @@ struct CapsLockControlConfig: Codable, Equatable, Sendable {
     struct RightCommandConfig: Codable, Equatable, Sendable {
         var action: RightCommandAction
 
-        init(action: RightCommandAction = .f18) {
+        /// 기본은 건드리지 않는다. F18 은 macOS 단축키까지 따로 지정해야 쓸모가 있는
+        /// 고급 설정이라, 모르고 켜지면 오른쪽 ⌘ 만 사라진다.
+        init(action: RightCommandAction = .disabled) {
             self.action = action
         }
 
         init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
-            action = try c.decodeIfPresent(RightCommandAction.self, forKey: .action) ?? .f18
+            // 빠져 있으면 끈 것으로 본다. 설정 파일에 없는 항목이 조용히
+            // 키보드를 바꿔 버리면 안 된다.
+            action = try c.decodeIfPresent(RightCommandAction.self, forKey: .action) ?? .disabled
         }
     }
 

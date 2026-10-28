@@ -98,7 +98,7 @@ struct ConfigDiffTests {
         var incoming = CapsLockControlConfig()
         incoming.defaults.whenAlreadyActive = .switchToPrevious
         incoming.modifiers.swapFnAndLeftControl = true
-        incoming.rightCommand.action = .disabled
+        incoming.rightCommand.action = .f18
         incoming.defaults.unmappedKeyPolicy = .passThrough
 
         let items = ConfigDiff.items(current: current, incoming: incoming)
@@ -112,7 +112,7 @@ struct ConfigDiffTests {
         let applied = ConfigDiff.apply(items, selecting: [fnItem.id], to: current)
         #expect(applied.modifiers.swapFnAndLeftControl)
         #expect(applied.defaults.whenAlreadyActive == .hide)
-        #expect(applied.rightCommand.action == .f18)
+        #expect(applied.rightCommand.action == .disabled)
     }
 
     @Test("바인딩이 설정보다 먼저, 키보드 순서로 나온다")

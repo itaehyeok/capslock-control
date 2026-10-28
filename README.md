@@ -14,8 +14,8 @@ dependencies — Apple frameworks only.
   `Caps + C`, `Caps + 1` — to run whatever you assigned to that key.
 - **Tap Caps Lock alone and it still toggles caps lock.** Hold it with another
   key and it is a layer; tap it by itself and it is Caps Lock.
-- **Right Command → F18** for input-source switching (uses the macOS shortcut).
-- **Swap fn ↔ Left Control** (optional).
+- Advanced, off by default: **Right Command → F18** for input-source switching
+  (uses the macOS shortcut) and **swap fn ↔ Left Control**.
 - Unassigned keys are swallowed so **no stray characters get typed**.
   The policy is configurable.
 
@@ -123,25 +123,25 @@ reports that one as a grey note, not a warning.
 **You start with an empty layout.** Click any blank key in the keyboard picture and
 the app picker opens. Pick from the list — that is all.
 
-### 5. Input-source switching (optional)
+### 5. Input-source switching with Right ⌘ (optional, advanced)
 
-This is the one thing you must set in macOS yourself.
+Off by default. Turn it on in Settings › Advanced › Right Command → `F18`, then
+set this in macOS yourself:
 
 > System Settings › Keyboard › Keyboard Shortcuts › Input Sources →
 > assign **F18** to **"Select the previous input source"**
 
-Then Right ⌘ switches input sources. Without this, Right ⌘ simply stops doing
-anything. If you would rather keep Right ⌘ as a normal modifier, set
-Settings › Keyboard › Right Command to `Leave alone`.
+Then Right ⌘ switches input sources. Without the macOS shortcut, Right ⌘ simply
+stops doing anything.
 
 ---
 
 ### Worth knowing
 
-**This app takes over two keys** — Caps Lock and Right Command.
-Right Command can be switched off in Settings; Caps Lock is the layer key and is
-fixed. **Caps Lock still works as Caps Lock when tapped alone**, so you do not
-lose it entirely.
+**This app takes over one key** — Caps Lock, the layer key. Right Command and
+fn ↔ Left Control change only if you turn them on in Settings › Advanced.
+**Caps Lock still works as Caps Lock when tapped alone**, so you do not lose it
+entirely.
 
 **There is no Dock icon.** Click the keyboard icon in the menu bar for the menu.
 If your menu bar is too crowded to show it, double-click
@@ -263,7 +263,7 @@ Instead of a driver, this uses `UserKeyMapping` in Apple's own `/usr/bin/hidutil
 | Physical key | After HID remap | Handled by |
 |---|---|---|
 | Caps Lock | F19 | CapsLock Control's event tap (the layer) |
-| Right Command | F18 | macOS input-source shortcut (passed straight through) |
+| Right Command | F18 | macOS input-source shortcut (optional · `rightCommand.action`) |
 | fn | Left Control | macOS (optional · `modifiers.swapFnAndLeftControl`) |
 | Left Control | fn | macOS (optional · paired with the above) |
 
@@ -315,7 +315,7 @@ file should never quietly change your keyboard.
     "capsLockTapTogglesCapsLock": true,
     "layerTapTimeoutMilliseconds": 250
   },
-  "rightCommand": { "action": "f18" },
+  "rightCommand": { "action": "none" },
   "modifiers": { "swapFnAndLeftControl": false },
   "layers": {
     "capsLock": {
@@ -714,8 +714,8 @@ framework 만 쓴다.
   (`Caps + C`, `Caps + 1`) 그 키에 지정해 둔 동작이 실행된다.
 - **Caps Lock 을 혼자 짧게 치면 원래 대문자 고정**이 동작한다.
   조합해서 쓰면 레이어, 톡 치면 Caps Lock.
-- **Right Command → F18** 로 한/영을 전환한다 (macOS 입력 소스 단축키를 그대로 쓴다).
-- **fn ↔ 왼쪽 Control 맞바꾸기** (옵션).
+- 고급 설정(기본은 꺼짐): **Right Command → F18** 로 한/영 전환(macOS 입력 소스
+  단축키를 그대로 쓴다), **fn ↔ 왼쪽 Control 맞바꾸기**.
 - 등록하지 않은 키는 삼켜서 **엉뚱한 글자가 입력되지 않는다**. 정책은 설정으로 바꾼다.
 
 **단축키로 할 수 있는 일**
@@ -815,23 +815,23 @@ Caps Lock 을 눌러도 아무 반응이 없고 `Caps` 표시등도 안 들어�
 **단축키는 비어 있는 상태로 시작한다.** 키보드 그림에서 빈 키를 누르면 앱 피커가
 열린다. 목록에서 고르기만 하면 된다.
 
-### 5. 한/영 전환을 쓰려면 (선택)
+### 5. 오른쪽 ⌘ 로 한/영 전환 (선택 · 고급)
 
-이것만 macOS 설정에서 직접 해야 한다.
+기본은 꺼져 있다. 설정 › 고급 › Right Command 를 `F18` 로 바꾼 뒤
+macOS 설정에서 직접 이것을 지정한다.
 
 > 시스템 설정 › 키보드 › 키보드 단축키 › 입력 소스 →
 > **"이전 입력 소스 선택"** 에 **F18** 지정
 
-그러면 오른쪽 ⌘ 로 한/영이 전환된다. 이 설정을 안 하면 오른쪽 ⌘ 만 없어지고
-아무 일도 일어나지 않는다. 오른쪽 ⌘ 를 그냥 쓰고 싶으면
-설정 › 키보드 › Right Command 를 `그대로 두기` 로 바꾼다.
+그러면 오른쪽 ⌘ 로 한/영이 전환된다. macOS 단축키를 지정하지 않으면 오른쪽 ⌘ 만
+없어지고 아무 일도 일어나지 않는다.
 
 ---
 
 ### 알아 두면 좋은 것
 
-**이 앱은 두 키를 가져간다** — Caps Lock, Right Command.
-Right Command 는 설정에서 끌 수 있지만 Caps Lock 은 레이어 키라 고정이다.
+**이 앱은 한 키를 가져간다** — 레이어 키인 Caps Lock.
+Right Command 와 fn ↔ 왼쪽 Control 은 설정 › 고급 에서 켰을 때만 바뀐다.
 **Caps Lock 은 혼자 짧게 치면 원래 대문자 고정으로 동작**하니 완전히 잃는 건 아니다.
 
 **Dock 아이콘이 없다.** 메뉴바의 키보드 아이콘을 클릭하면 메뉴가 나온다.
@@ -954,7 +954,7 @@ macOS 는 Caps Lock 에 hold-delay 를 걸기 때문에 레이어 키로 쓰면 
 | 물리 키 | HID 리맵 후 | 처리 주체 |
 |---|---|---|
 | Caps Lock | F19 | 이 앱의 event tap (레이어) |
-| Right Command | F18 | macOS 입력 소스 단축키 (손대지 않고 통과) |
+| Right Command | F18 | macOS 입력 소스 단축키 (선택 · `rightCommand.action`) |
 | fn | Left Control | macOS (선택 · `modifiers.swapFnAndLeftControl`) |
 | Left Control | fn | macOS (선택 · 위와 한 쌍) |
 
@@ -1005,7 +1005,7 @@ hidutil property --set '{"UserKeyMapping":[]}'
     "capsLockTapTogglesCapsLock": true,
     "layerTapTimeoutMilliseconds": 250
   },
-  "rightCommand": { "action": "f18" },
+  "rightCommand": { "action": "none" },
   "modifiers": { "swapFnAndLeftControl": false },
   "layers": {
     "capsLock": {

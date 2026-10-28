@@ -8,28 +8,37 @@ struct SettingsView: View {
     @State private var launchError: String?
 
     var body: some View {
+        TabView {
+            generalTab
+                .tabItem { Label("일반", systemImage: "gearshape") }
+            advancedTab
+                .tabItem { Label("고급", systemImage: "slider.horizontal.3") }
+        }
+        .frame(width: 520, height: 640)
+        .onAppear { launchState = LaunchAtLogin.state }
+        .task {
+            #if DEBUG
+            // 개발용. `--args -openSettings -openImport` 로 Import 화면을 바로 연다.
+            if ProcessInfo.processInfo.arguments.contains("-openImport") {
+                model.sync.isImportSheetPresented = true
+            }
+            #endif
+        }
+        .sheet(isPresented: Binding(
+            get: { model.sync.isImportSheetPresented },
+            set: { model.sync.isImportSheetPresented = $0 }
+        )) {
+            SnapshotImportView(model: model) { model.sync.isImportSheetPresented = false }
+        }
+    }
+
+    // MARK: - 탭
+
+    /// 처음 쓰는 사람도 손댈 만한 것.
+    private var generalTab: some View {
         Form {
             Section("일반") {
                 launchAtLoginRow
-            }
-
-            Section("키보드") {
-                Toggle("fn 과 왼쪽 Control 맞바꾸기", isOn: Binding(
-                    get: { model.config.modifiers.swapFnAndLeftControl },
-                    set: { model.setSwapFnAndLeftControl($0) }
-                ))
-                Text("Karabiner 에서 쓰던 fn ↔ 왼쪽 Control 스왑입니다. "
-                     + "Apple 키보드(내장·Magic Keyboard)에서만 동작합니다.")
-                    .font(.caption).foregroundStyle(.secondary)
-
-                Picker("Right Command", selection: Binding(
-                    get: { model.config.rightCommand.action },
-                    set: { model.setRightCommandAction($0) }
-                )) {
-                    ForEach(RightCommandAction.allCases, id: \.self) { action in
-                        Text(action.displayName).tag(action)
-                    }
-                }
             }
 
             Section("레이어 동작") {
@@ -80,23 +89,43 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 520, height: 640)
         .disabled(!model.isEditable)
-        .onAppear { launchState = LaunchAtLogin.state }
-        .task {
-            #if DEBUG
-            // 개발용. `--args -openSettings -openImport` 로 Import 화면을 바로 연다.
-            if ProcessInfo.processInfo.arguments.contains("-openImport") {
-                model.sync.isImportSheetPresented = true
+    }
+
+    /// Caps Lock 말고 다른 키를 바꾸는 설정. 전부 꺼진 채로 시작한다.
+    /// 모르고 켜면 평소 쓰던 키가 사라지므로 일반 탭과 떼어 둔다.
+    private var advancedTab: some View {
+        Form {
+            Section {
+                Toggle("fn 과 왼쪽 Control 맞바꾸기", isOn: Binding(
+                    get: { model.config.modifiers.swapFnAndLeftControl },
+                    set: { model.setSwapFnAndLeftControl($0) }
+                ))
+                Text("Apple 키보드(내장·Magic Keyboard)에서만 동작합니다.")
+                    .font(.caption).foregroundStyle(.secondary)
+
+                Picker("Right Command", selection: Binding(
+                    get: { model.config.rightCommand.action },
+                    set: { model.setRightCommandAction($0) }
+                )) {
+                    ForEach(RightCommandAction.allCases, id: \.self) { action in
+                        Text(action.displayName).tag(action)
+                    }
+                }
+                Text("F18 로 바꾸면 시스템 설정 › 키보드 › 키보드 단축키 › 입력 소스 에서 "
+                     + "\"이전 입력 소스 선택\" 에 F18 을 지정해야 오른쪽 ⌘ 로 입력 소스가 바뀝니다. "
+                     + "지정하지 않으면 오른쪽 ⌘ 가 아무 일도 하지 않습니다.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } header: {
+                Text("다른 키 바꾸기")
+            } footer: {
+                Text("Caps Lock 말고 다른 키의 동작을 바꿉니다. 필요할 때만 켜세요.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
-            #endif
         }
-        .sheet(isPresented: Binding(
-            get: { model.sync.isImportSheetPresented },
-            set: { model.sync.isImportSheetPresented = $0 }
-        )) {
-            SnapshotImportView(model: model) { model.sync.isImportSheetPresented = false }
-        }
+        .formStyle(.grouped)
+        .disabled(!model.isEditable)
     }
 
     // MARK: - 미디어 키

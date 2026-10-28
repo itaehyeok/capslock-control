@@ -27,7 +27,7 @@ struct CapsLockControlConfigTests {
         let config = try JSONDecoder().decode(CapsLockControlConfig.self, from: json)
         #expect(config.version == CapsLockControlConfig.currentVersion)
         #expect(config.defaults.whenAlreadyActive == .hide)
-        #expect(config.rightCommand.action == .f18)
+        #expect(config.rightCommand.action == .disabled)
     }
 
     @Test("rightCommand 를 none 으로 끌 수 있다")
@@ -129,23 +129,23 @@ struct CapsLockControlConfigTests {
     @Test("HID 매핑 목록이 rightCommand 설정을 따라간다")
     func hidMappingsFollowConfig() {
         var config = CapsLockControlConfig()
-        #expect(HIDRemapper.mappings(for: config).count == 2)
+        #expect(HIDRemapper.mappings(for: config).count == 1)
 
-        config.rightCommand.action = .disabled
+        config.rightCommand.action = .f18
         let mappings = HIDRemapper.mappings(for: config)
-        #expect(mappings.count == 1)
-        #expect(!mappings.contains(HIDRemapper.rightCommandToF18))
+        #expect(mappings.count == 2)
+        #expect(mappings.contains(HIDRemapper.rightCommandToF18))
     }
 
     @Test("fn ↔ 왼쪽 Control 스왑은 켤 때만 매핑에 들어간다")
     func fnControlSwapIsOptional() {
         var config = CapsLockControlConfig()
         #expect(config.modifiers.swapFnAndLeftControl == false)
-        #expect(HIDRemapper.mappings(for: config).count == 2)
+        #expect(HIDRemapper.mappings(for: config).count == 1)
 
         config.modifiers.swapFnAndLeftControl = true
         let mappings = HIDRemapper.mappings(for: config)
-        #expect(mappings.count == 4)
+        #expect(mappings.count == 3)
         // 양방향이어야 한다. 한쪽만 걸면 두 키가 모두 Control 이 된다.
         #expect(mappings.contains { $0.source == HIDRemapper.HIDUsage.fn
                                  && $0.destination == HIDRemapper.HIDUsage.leftControl })
@@ -282,9 +282,17 @@ struct DefaultConfigurationTests {
         #expect(DefaultConfiguration.make().modifiers.swapFnAndLeftControl == false)
     }
 
-    @Test("Right Command 는 F18 로 시작한다")
+    @Test("Right Command 는 건드리지 않은 채로 시작한다")
     func rightCommandDefault() {
-        #expect(DefaultConfiguration.make().rightCommand.action == .f18)
+        // F18 은 macOS 단축키를 따로 지정해야 쓸모가 있다. 모르고 켜지면 오른쪽 ⌘ 만 사라진다.
+        #expect(DefaultConfiguration.make().rightCommand.action == .disabled)
+    }
+
+    @Test("설정 파일에 rightCommand 가 없으면 건드리지 않는 것으로 읽는다")
+    func missingRightCommandDefaultsOff() throws {
+        let json = Data(#"{"version":1,"layers":{}}"#.utf8)
+        let config = try JSONDecoder().decode(CapsLockControlConfig.self, from: json)
+        #expect(config.rightCommand.action == .disabled)
     }
 
     @Test("Caps Lock 단독 탭은 켜진 채로 시작한다")

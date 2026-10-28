@@ -67,7 +67,7 @@ final class HIDRemapper: @unchecked Sendable {
         return result
     }
 
-    static var defaultMappings: [Mapping] { layerMappings + [rightCommandToF18] }
+    static var defaultMappings: [Mapping] { layerMappings }
 
     private let log = Logger(subsystem: "dev.itaehyeok.CapsLockControl", category: "HIDRemapper")
     private let queue = DispatchQueue(label: "dev.itaehyeok.CapsLockControl.hid")
